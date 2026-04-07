@@ -1,6 +1,7 @@
 """FastAPI server for warehouse environment."""
 
 import os
+import asyncio
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
@@ -13,13 +14,15 @@ from .session_manager import SessionManager
 from .task_config import get_task_variants, get_task_info, is_valid_task
 
 app = FastAPI(
-    title="Warehouse Environment",
-    version="2.0.0",
-    description="Multi-warehouse inventory optimization with session management"
+    title="LUNAR: Multi-Domain RL Environment",
+    version="3.0.0",
+    description="Multi-domain optimization with session management and leaderboard",
+    docs_url="/docs",
+    openapi_url="/openapi.json",
 )
 
-# Session manager for multi-agent support
-manager = SessionManager()
+# Session manager for multi-agent support with automatic cleanup
+manager = SessionManager(max_sessions=100, session_timeout_hours=2)
 
 
 class ResetRequest(BaseModel):
@@ -140,17 +143,33 @@ async def render(session_id: str = Query(None)):
 
 @app.get("/health")
 async def health():
-    """Health check endpoint."""
-    return {"status": "ok"}
+    """Health check endpoint with system stats."""
+    stats = manager.get_stats()
+    return {
+        "status": "ok",
+        "version": "3.0.0",
+        "active_sessions": stats["total_sessions"],
+        "max_sessions": stats["max_sessions"],
+    }
+
+
+@app.get("/stats")
+async def stats():
+    """Get detailed server statistics."""
+    return {
+        "server_stats": manager.get_stats(),
+        "available_tasks": len(get_task_variants()),
+        "total_leaderboard_entries": len(manager.leaderboard),
+    }
 
 
 @app.get("/manifest")
 async def manifest():
     """Return OpenEnv specification for this environment."""
     return {
-        "version": "2.0.0",
-        "name": "Warehouse Inventory Management",
-        "description": "Multi-warehouse inventory optimization RL environment with session management",
+        "version": "3.0.0",
+        "name": "LUNAR: Multi-Domain RL Environment",
+        "description": "Multi-domain optimization including warehouse management, supply chain, demand forecasting, production scheduling, and resource allocation",
         "observation_space": {
             "type": "object",
             "properties": {
@@ -178,11 +197,20 @@ async def manifest():
             }
         },
         "tasks": list(get_task_variants().keys()),
+        "domains": [
+            "warehouse_management",
+            "supply_chain_logistics",
+            "demand_forecasting",
+            "production_scheduling",
+            "dynamic_resource_allocation"
+        ],
         "features": {
             "multi_agent": True,
             "session_management": True,
+            "automatic_cleanup": True,
             "leaderboard": True,
-            "task_variants": 6,
+            "task_variants": 21,
+            "multi_domain": True,
         }
     }
 
