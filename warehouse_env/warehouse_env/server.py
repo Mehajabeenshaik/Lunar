@@ -2,19 +2,24 @@
 
 import os
 from typing import Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 import uvicorn
 
 from .env import WarehouseEnv
 from .models import Action, Observation
 from .graders import get_grader
+from .session_manager import SessionManager
+from .task_config import get_task_variants, get_task_info, is_valid_task
 
-app = FastAPI(title="Warehouse Environment", version="1.0.0")
+app = FastAPI(
+    title="Warehouse Environment",
+    version="2.0.0",
+    description="Multi-warehouse inventory optimization with session management"
+)
 
-# Global environment state
-_env: Optional[WarehouseEnv] = None
-_task: str = os.getenv("WAREHOUSE_TASK", "warehouse_easy")
+# Session manager for multi-agent support
+manager = SessionManager()
 
 
 class ResetRequest(BaseModel):
@@ -24,6 +29,7 @@ class ResetRequest(BaseModel):
 class ResetResponse(BaseModel):
     observation: dict
     task: str
+    session_id: str = None
 
 
 class StepRequest(BaseModel):
@@ -44,33 +50,51 @@ class StateResponse(BaseModel):
 
 
 @app.post("/reset", response_model=ResetResponse)
-async def reset(req: Optional[ResetRequest] = None):
-    """Reset environment to initial state."""
-    global _env, _task
+async def reset(req: Optional[ResetRequest] = None, session_id: str = Query(None)):
+    """Reset environment to initial state (create new session if needed)."""
     
-    task = req.task if req and req.task else _task
-    _task = task
+    # Determine task
+    task = req.task if req and req.task else os.getenv("WAREHOUSE_TASK", "warehouse_easy")
     
-    _env = WarehouseEnv(task=task)
-    obs = _env.reset()
+    # Validate task
+    if not is_valid_task(task):
+        raise HTTPException(status_code=400, detail=f"Unknown task: {task}. Valid tasks: {list(get_task_variants().keys())}")
     
-    return ResetResponse(observation=obs.model_dump(), task=task)
+    # Create or reuse session
+    if not session_id:
+        session_id = manager.create_session(task)
+    
+    env = manager.get_session(session_id)
+    obs = env.reset()
+    
+    return ResetResponse(
+        observation=obs.model_dump(),
+        task=task,
+        session_id=session_id  # Return session ID for future requests
+    )
 
 
 @app.post("/step", response_model=StepResponse)
-async def step(req: StepRequest):
+async def step(req: StepRequest, session_id: str = Query(...)):
     """Execute one environment step."""
-    global _env
     
-    if _env is None:
-        raise HTTPException(status_code=400, detail="Environment not reset. Call /reset first.")
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id required")
+    
+    try:
+        env = manager.get_session(session_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     
     try:
         action = Action(**req.action)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Invalid action: {str(e)}")
     
-    obs, reward = _env.step(action)
+    obs, reward = env.step(action)
+    
+    # Record reward for leaderboard
+    manager.record_reward(session_id, reward.value)
     
     return StepResponse(
         observation=obs.model_dump(),
@@ -81,29 +105,37 @@ async def step(req: StepRequest):
 
 
 @app.get("/state", response_model=StateResponse)
-async def state():
+async def state(session_id: str = Query(...)):
     """Get current environment state."""
-    global _env
     
-    if _env is None:
-        raise HTTPException(status_code=400, detail="Environment not reset. Call /reset first.")
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id required")
+    
+    try:
+        env = manager.get_session(session_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     
     return StateResponse(
-        state=_env.state_dict(),
-        task=_env.task,
-        episode_rewards=_env.episode_rewards,
+        state=env.state_dict(),
+        task=env.task,
+        episode_rewards=env.episode_rewards,
     )
 
 
 @app.get("/render")
-async def render():
+async def render(session_id: str = Query(None)):
     """Render environment visualization."""
-    global _env
     
-    if _env is None:
-        return {"render": "Environment not initialized"}
+    if not session_id:
+        return {"render": "No session provided"}
     
-    return {"render": _env.render()}
+    try:
+        env = manager.get_session(session_id)
+    except ValueError:
+        return {"render": "Session not found"}
+    
+    return {"render": env.render()}
 
 
 @app.get("/health")
@@ -116,9 +148,9 @@ async def health():
 async def manifest():
     """Return OpenEnv specification for this environment."""
     return {
-        "version": "1.0.0",
+        "version": "2.0.0",
         "name": "Warehouse Inventory Management",
-        "description": "Multi-warehouse inventory optimization RL environment",
+        "description": "Multi-warehouse inventory optimization RL environment with session management",
         "observation_space": {
             "type": "object",
             "properties": {
@@ -145,20 +177,50 @@ async def manifest():
                 "info": {"type": "object"},
             }
         },
-        "tasks": [
-            {"id": "warehouse_easy", "description": "1 warehouse, 30 steps"},
-            {"id": "warehouse_medium", "description": "3 warehouses, 60 steps"},
-            {"id": "warehouse_hard", "description": "5 warehouses, 90 steps"},
-        ],
-        "endpoints": {
-            "/health": "GET - Health check",
-            "/manifest": "GET - OpenEnv specification",
-            "/reset": "POST - Initialize episode",
-            "/step": "POST - Execute action",
-            "/state": "GET - Current state",
-            "/render": "GET - Visualization",
-            "/docs": "GET - API documentation",
+        "tasks": list(get_task_variants().keys()),
+        "features": {
+            "multi_agent": True,
+            "session_management": True,
+            "leaderboard": True,
+            "task_variants": 6,
         }
+    }
+
+
+@app.get("/tasks")
+async def list_tasks():
+    """List all available task variants."""
+    return {
+        "total": len(get_task_variants()),
+        "tasks": get_task_variants()
+    }
+
+
+@app.get("/sessions")
+async def list_sessions():
+    """List all active sessions."""
+    return {
+        "active_sessions": len(manager.sessions),
+        "sessions": manager.list_sessions()
+    }
+
+
+@app.delete("/sessions/{session_id}")
+async def delete_session(session_id: str):
+    """Delete a session."""
+    try:
+        manager.delete_session(session_id)
+        return {"status": "ok", "message": f"Session {session_id} deleted"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/leaderboard")
+async def leaderboard(limit: int = Query(10, ge=1, le=100)):
+    """Get top sessions by reward."""
+    return {
+        "total_sessions": len(manager.leaderboard),
+        "leaderboard": manager.get_leaderboard(limit=limit)
     }
 
 
