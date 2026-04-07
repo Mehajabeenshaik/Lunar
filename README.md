@@ -1,6 +1,5 @@
 ---
 title: LUNAR - Multi-Domain RL Environment
-emoji: 🌙
 colorFrom: purple
 colorTo: indigo
 sdk: docker
@@ -13,7 +12,7 @@ pinned: true
 
 LUNAR is a next-generation OpenEnv platform featuring **20+ sophisticated task variants** spanning multiple domains: warehouse inventory, supply chain logistics, demand forecasting, production scheduling, and advanced resource allocation. Designed for evaluating RL agents, LLM-based planners, and hybrid AI systems at scale.
 
-## 🚀 Quick Highlight
+##  Quick Highlight
 
 - **20+ Task Variants** spanning 5 domains (warehouse, supply chain, demand forecasting, production, resources)
 - **Multi-Agent Session Management** for parallel agent evaluation
@@ -23,7 +22,7 @@ LUNAR is a next-generation OpenEnv platform featuring **20+ sophisticated task v
 - **Production Deployment** on HuggingFace Spaces + Docker
 - **100/100 Requirement Compliance** verified against OpenEnv spec
 
-## 🎯 Features
+##  Features
 
 - **OpenEnv Spec Compliant**: Full typed models (Pydantic v2), REST API, YAML metadata, /manifest endpoint
 - **20+ Task Variants** across 5 domains:
@@ -39,7 +38,7 @@ LUNAR is a next-generation OpenEnv platform featuring **20+ sophisticated task v
 - **Comprehensive API**: 12 REST endpoints with session management
 - **Enterprise Deployment**: Docker containerization, HF Spaces hosting, load-balanced design
 
-## 🌍 Domain Overview
+##  Domain Overview
 
 ### Domain 1: Warehouse Management (6 tasks)
 Optimize inventory across warehouse networks under variable demand.
