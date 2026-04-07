@@ -10,7 +10,10 @@ try:
 except ImportError:
     HAS_OPENAI = False
 
-from warehouse_env import WarehouseEnv, Action, Observation
+try:
+    from warehouse_env.warehouse_env import WarehouseEnv, Action, Observation
+except ImportError:
+    from warehouse_env import WarehouseEnv, Action, Observation
 
 # ============================================================================
 # ENVIRONMENT SETUP
