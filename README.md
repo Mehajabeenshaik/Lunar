@@ -4,7 +4,6 @@ emoji: 📦
 colorFrom: blue
 colorTo: green
 sdk: docker
-app_file: warehouse_env/server.py
 pinned: true
 ---
 
