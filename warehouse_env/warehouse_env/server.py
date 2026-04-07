@@ -273,6 +273,11 @@ async def root():
     }
 
 
-if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
+def main():
+    """Main entry point for the server."""
+    port = int(os.getenv("PORT", 7860))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
+
+if __name__ == "__main__":
+    main()
