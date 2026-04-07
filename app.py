@@ -1,9 +1,8 @@
-#!/usr/bin/env bash
-# app.py - Simple wrapper for HF Spaces
+"""FastAPI app wrapper for HF Spaces deployment."""
 
 import os
 import sys
-from warehouse_env.server import app
+from warehouse_env.warehouse_env.server import app
 
 if __name__ == "__main__":
     import uvicorn

@@ -24,7 +24,7 @@ if __name__ == "__main__":
     # Production settings for HF Spaces - simplified for stability
     try:
         uvicorn.run(
-            "warehouse_env.server:app",
+            "warehouse_env.warehouse_env.server:app",
             host=host,
             port=port,
             reload=reload,

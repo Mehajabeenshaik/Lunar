@@ -3,27 +3,44 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PORT=7860
+ENV HOST=0.0.0.0
 
 # Copy entire project
 COPY . .
 
-# Install dependencies directly with pip
-RUN pip install --no-cache-dir --upgrade pip && \
+# Upgrade pip and install dependencies
+RUN pip install --no-cache-dir --upgrade \
+    pip \
+    setuptools \
+    wheel && \
     pip install --no-cache-dir \
     fastapi==0.104.1 \
-    uvicorn==0.24.4 \
+    uvicorn[standard]==0.24.4 \
     pydantic==2.5.0 \
+    pydantic-core==2.14.1 \
     numpy==1.24.3 \
-    openai==1.3.0 \
+    requests==2.31.0 \
     python-dotenv==1.0.0
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=15s --start-period=60s --retries=3 \
+# Verify installation
+RUN python -c "import fastapi; import uvicorn; import pydantic; print('✓ All dependencies installed')"
+
+# Health check with proper timeout
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=2 \
     CMD curl -f http://localhost:7860/health || exit 1
 
 # Expose port
 EXPOSE 7860
 
-# Run server
-CMD ["python", "run_server.py"]
+# Run app directly - HF Spaces compatible
+CMD ["python", "-u", "app.py"]
+
