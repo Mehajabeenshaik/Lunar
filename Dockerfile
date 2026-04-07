@@ -22,14 +22,7 @@ RUN pip install --no-cache-dir --upgrade \
     pip \
     setuptools \
     wheel && \
-    pip install --no-cache-dir \
-    fastapi==0.104.1 \
-    uvicorn[standard]==0.24.4 \
-    pydantic==2.5.0 \
-    pydantic-core==2.14.1 \
-    numpy==1.24.3 \
-    requests==2.31.0 \
-    python-dotenv==1.0.0
+    pip install --no-cache-dir -r requirements.txt
 
 # Install openai for inference.py
 RUN pip install --no-cache-dir openai>=1.3.0
