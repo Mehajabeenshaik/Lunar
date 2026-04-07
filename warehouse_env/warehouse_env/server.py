@@ -209,7 +209,7 @@ async def manifest():
             "session_management": True,
             "automatic_cleanup": True,
             "leaderboard": True,
-            "task_variants": 21,
+            "task_variants": len(get_task_variants()),
             "multi_domain": True,
         }
     }

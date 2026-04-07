@@ -159,13 +159,126 @@ class HardTaskGrader(TaskGrader):
         }
 
 
+class SupplyChainGrader(TaskGrader):
+    """Generic grader for supply chain tasks."""
+    
+    def grade(self, final_state: State, episode_rewards: List[float]) -> Dict[str, float]:
+        avg_reward = np.mean(episode_rewards) if episode_rewards else 0.0
+        
+        # Supply chain metrics: network efficiency, cost minimization
+        shortage_ratio = final_state.shortage_penalty / 1500.0
+        service_score = max(0.0, 1.0 - shortage_ratio)
+        
+        total_cost = final_state.holding_costs + final_state.shortage_penalty / 10.0
+        cost_efficiency = max(0.0, 1.0 - (total_cost / 12000.0))
+        
+        score = 0.5 * avg_reward + 0.3 * service_score + 0.2 * cost_efficiency
+        
+        return {
+            "score": float(np.clip(score, 0.0, 1.0)),
+            "avg_reward": float(avg_reward),
+            "service_score": float(service_score),
+            "cost_efficiency": float(cost_efficiency),
+        }
+
+
+class ForecastingGrader(TaskGrader):
+    """Generic grader for forecasting tasks."""
+    
+    def grade(self, final_state: State, episode_rewards: List[float]) -> Dict[str, float]:
+        avg_reward = np.mean(episode_rewards) if episode_rewards else 0.0
+        
+        # Forecasting metrics: prediction accuracy, consistency
+        if len(episode_rewards) > 1:
+            prediction_accuracy = 1.0 - (np.std(episode_rewards) / (np.mean(np.abs(episode_rewards)) + 1e-6))
+            prediction_accuracy = max(0.0, min(1.0, prediction_accuracy))
+        else:
+            prediction_accuracy = 0.5
+        
+        score = 0.6 * avg_reward + 0.4 * prediction_accuracy
+        
+        return {
+            "score": float(np.clip(score, 0.0, 1.0)),
+            "avg_reward": float(avg_reward),
+            "prediction_accuracy": float(prediction_accuracy),
+        }
+
+
+class ProductionGrader(TaskGrader):
+    """Generic grader for production scheduling tasks."""
+    
+    def grade(self, final_state: State, episode_rewards: List[float]) -> Dict[str, float]:
+        avg_reward = np.mean(episode_rewards) if episode_rewards else 0.0
+        
+        # Production metrics: schedule quality, resource utilization
+        schedule_quality = avg_reward
+        
+        # Resource utilization from holding costs (inverse)
+        utilization_efficiency = max(0.0, 1.0 - (final_state.holding_costs / 5000.0))
+        
+        score = 0.65 * schedule_quality + 0.35 * utilization_efficiency
+        
+        return {
+            "score": float(np.clip(score, 0.0, 1.0)),
+            "avg_reward": float(avg_reward),
+            "schedule_quality": float(schedule_quality),
+            "utilization_efficiency": float(utilization_efficiency),
+        }
+
+
+class ResourceAllocationGrader(TaskGrader):
+    """Generic grader for resource allocation tasks."""
+    
+    def grade(self, final_state: State, episode_rewards: List[float]) -> Dict[str, float]:
+        avg_reward = np.mean(episode_rewards) if episode_rewards else 0.0
+        
+        # Resource allocation metrics: fairness, efficiency
+        if len(final_state.warehouse_levels) > 1:
+            # Penalize imbalanced allocation
+            allocation_fairness = 1.0 - (np.std(final_state.warehouse_levels) / 
+                                        (np.mean(final_state.warehouse_levels) + 1e-6))
+            allocation_fairness = max(0.0, min(1.0, allocation_fairness))
+        else:
+            allocation_fairness = 0.5
+        
+        # Minimize waste (shortage penalty indicates unmet demand)
+        waste_efficiency = max(0.0, 1.0 - (final_state.shortage_penalty / 5000.0))
+        
+        score = 0.5 * avg_reward + 0.3 * allocation_fairness + 0.2 * waste_efficiency
+        
+        return {
+            "score": float(np.clip(score, 0.0, 1.0)),
+            "avg_reward": float(avg_reward),
+            "allocation_fairness": float(allocation_fairness),
+            "waste_efficiency": float(waste_efficiency),
+        }
+
+
 def get_grader(task_name: str) -> TaskGrader:
     """Get appropriate grader for task."""
-    if task_name == "warehouse_easy":
+    # Warehouse domain
+    if task_name == "warehouse_easy" or task_name == "warehouse_easy_volatile":
         return EasyTaskGrader()
-    elif task_name == "warehouse_medium":
+    elif task_name == "warehouse_medium" or task_name == "warehouse_medium_volatile":
         return MediumTaskGrader()
-    elif task_name == "warehouse_hard":
+    elif task_name == "warehouse_hard" or task_name == "warehouse_hard_stress":
         return HardTaskGrader()
+    
+    # Supply chain domain
+    elif task_name.startswith("supply_chain_"):
+        return SupplyChainGrader()
+    
+    # Forecasting domain
+    elif task_name.startswith("forecast_"):
+        return ForecastingGrader()
+    
+    # Production domain
+    elif task_name.startswith("production_"):
+        return ProductionGrader()
+    
+    # Resource allocation domain
+    elif task_name.startswith("resource_"):
+        return ResourceAllocationGrader()
+    
     else:
         raise ValueError(f"Unknown task: {task_name}")
