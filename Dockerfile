@@ -31,8 +31,14 @@ RUN pip install --no-cache-dir --upgrade \
     requests==2.31.0 \
     python-dotenv==1.0.0
 
+# Install openai for inference.py
+RUN pip install --no-cache-dir openai>=1.3.0
+
 # Verify installation
 RUN python -c "import fastapi; import uvicorn; import pydantic; print('✓ All dependencies installed')"
+
+# Test app imports
+RUN python -c "from app import app; print('✓ App imports successfully')"
 
 # Health check with proper timeout
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=2 \
@@ -41,6 +47,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=2 \
 # Expose port
 EXPOSE 7860
 
-# Run app directly - HF Spaces compatible
-CMD ["python", "-u", "app.py"]
+# Run app using uvicorn with explicit module
+CMD ["uvicorn", "--host", "0.0.0.0", "--port", "7860", "--app-dir", "/app", "app:app"]
 

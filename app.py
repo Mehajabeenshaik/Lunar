@@ -2,16 +2,13 @@
 
 import os
 import sys
+from pathlib import Path
 
-# Try different import paths for compatibility
-try:
-    from warehouse_env.warehouse_env.server import app
-except ImportError:
-    try:
-        from warehouse_env.server import app
-    except ImportError:
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "warehouse_env"))
-        from warehouse_env.server import app
+# Add warehouse_env to path
+sys.path.insert(0, str(Path(__file__).parent / "warehouse_env"))
+
+# Import app
+from warehouse_env.server import app
 
 if __name__ == "__main__":
     import uvicorn
