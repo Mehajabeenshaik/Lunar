@@ -1,0 +1,56 @@
+name: warehouse_env
+version: "1.0.0"
+description: "Real-world warehouse inventory management RL environment with multi-warehouse optimization tasks"
+tasks:
+  - id: warehouse_easy
+    name: "Single Warehouse Inventory"
+    description: "Easy task: Manage inventory in a single warehouse with fixed demand patterns"
+    difficulty: easy
+  - id: warehouse_medium
+    name: "Multi-Warehouse Network"
+    description: "Medium task: Optimize 3 warehouses with variable demand and transfer costs"
+    difficulty: medium
+  - id: warehouse_hard
+    name: "Complex Supply Chain"
+    description: "Hard task: Manage 5 warehouses with seasonal demand and supplier constraints"
+    difficulty: hard
+
+api:
+  host: "0.0.0.0"
+  port: 5000
+  endpoints:
+    - path: "/reset"
+      method: "POST"
+      description: "Reset environment to initial state"
+    - path: "/step"
+      method: "POST"
+      description: "Execute one environment step"
+    - path: "/state"
+      method: "GET"
+      description: "Get current state"
+    - path: "/render"
+      method: "GET"
+      description: "Render environment visualization"
+
+observation_space:
+  type: "dict"
+  properties:
+    warehouse_levels: "array of current inventory levels (0-1000 units per warehouse)"
+    demand_forecast: "array of forecasted demand for next step"
+    supplier_status: "array of supplier availability (0-1)"
+    day: "current simulation day (0-365)"
+    holding_costs: "cumulative holding cost"
+    shortage_penalty: "cumulative shortage penalty"
+
+action_space:
+  type: "dict"
+  properties:
+    reorder_quantities: "array of unit quantities to reorder at each warehouse"
+    transfers: "matrix of inter-warehouse transfer quantities"
+
+reward_function: "Service level (80% minimum) - 0.1*(holding_cost + shortage_penalty)/max_possible"
+
+constraints:
+  max_warehouse_capacity: 1000
+  supplier_lead_time: 2
+  max_transfer_cost: 50

@@ -1,0 +1,47 @@
+# Virtual Environment
+.venv/
+.env
+*.pyc
+__pycache__/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Docker
+.dockerignore
+
+# Python
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg
+
+# Test outputs
+test_*.json
+test_output.log
+
+# System files
+Application\ Data/
+Cookies/
+Documents/My\ Music/
+Documents/My\ Pictures/
+Documents/My\ Videos/
+Local\ Settings/
+My\ Documents/
+NetHood/
+PrintHood/
+Recent/
+SendTo/
+Start\ Menu/
+Templates/
