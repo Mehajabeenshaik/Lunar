@@ -15,7 +15,11 @@ dependencies = [
     "uvicorn>=0.23",
     "openai>=1.0",
     "python-dotenv>=1.0",
+    "openenv>=0.1.0",
 ]
+
+[project.scripts]
+server = "warehouse_env.server:app"
 
 [project.optional-dependencies]
 dev = [
