@@ -11,17 +11,18 @@ RUN apt-get update && apt-get install -y \
 # Copy project files
 COPY pyproject.toml setup.py* README.md* ./
 COPY warehouse_env/ ./warehouse_env/
-COPY inference.py .
+COPY run_server.py inference.py ./
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -e .
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5000/health || exit 1
+# Health check (check both ports for flexibility)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:7860/health || curl -f http://localhost:5000/health || exit 1
 
-# Expose API port
-EXPOSE 5000
+# HF Spaces uses port 7860, but allow override via PORT env var
+ENV PORT=7860
+EXPOSE 7860
 
-# Default command: start API server with uvicorn
-CMD ["python", "-m", "uvicorn", "warehouse_env.server:app", "--host", "0.0.0.0", "--port", "5000"]
+# Default command: start API server
+CMD ["python", "run_server.py"]

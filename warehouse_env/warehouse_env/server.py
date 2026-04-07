@@ -112,6 +112,56 @@ async def health():
     return {"status": "ok"}
 
 
+@app.get("/manifest")
+async def manifest():
+    """Return OpenEnv specification for this environment."""
+    return {
+        "version": "1.0.0",
+        "name": "Warehouse Inventory Management",
+        "description": "Multi-warehouse inventory optimization RL environment",
+        "observation_space": {
+            "type": "object",
+            "properties": {
+                "warehouse_levels": {"type": "array", "items": {"type": "number"}},
+                "demand_forecast": {"type": "array", "items": {"type": "number"}},
+                "supplier_status": {"type": "array", "items": {"type": "number"}},
+                "day": {"type": "integer"},
+                "holding_costs": {"type": "number"},
+                "shortage_penalty": {"type": "number"},
+            }
+        },
+        "action_space": {
+            "type": "object",
+            "properties": {
+                "reorder_quantities": {"type": "array", "items": {"type": "number"}},
+                "transfers": {"type": "array", "items": {"type": "array"}},
+            }
+        },
+        "reward_space": {
+            "type": "object",
+            "properties": {
+                "value": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                "done": {"type": "boolean"},
+                "info": {"type": "object"},
+            }
+        },
+        "tasks": [
+            {"id": "warehouse_easy", "description": "1 warehouse, 30 steps"},
+            {"id": "warehouse_medium", "description": "3 warehouses, 60 steps"},
+            {"id": "warehouse_hard", "description": "5 warehouses, 90 steps"},
+        ],
+        "endpoints": {
+            "/health": "GET - Health check",
+            "/manifest": "GET - OpenEnv specification",
+            "/reset": "POST - Initialize episode",
+            "/step": "POST - Execute action",
+            "/state": "GET - Current state",
+            "/render": "GET - Visualization",
+            "/docs": "GET - API documentation",
+        }
+    }
+
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     uvicorn.run(app, host="0.0.0.0", port=port)
