@@ -252,6 +252,27 @@ async def leaderboard(limit: int = Query(10, ge=1, le=100)):
     }
 
 
+@app.get("/")
+async def root():
+    """Welcome endpoint - redirects to API documentation."""
+    return {
+        "message": "Welcome to LUNAR: Multi-Domain RL Environment",
+        "version": "3.0.0",
+        "documentation": "http://localhost:7860/docs",
+        "endpoints": {
+            "health": "/health",
+            "tasks": "/tasks",
+            "manifest": "/manifest",
+            "reset": "/reset (POST)",
+            "step": "/step (POST)",
+            "state": "/state",
+            "sessions": "/sessions",
+            "leaderboard": "/leaderboard",
+            "stats": "/stats"
+        }
+    }
+
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     uvicorn.run(app, host="0.0.0.0", port=port)
