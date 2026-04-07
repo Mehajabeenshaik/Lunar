@@ -1,24 +1,150 @@
-name: warehouse_env
-version: "1.0.0"
-description: "Real-world warehouse inventory management RL environment with multi-warehouse optimization tasks"
+name: lunar
+version: "3.0.0"
+description: "LUNAR: Multi-Domain Reinforcement Learning Environment - 21 task variants across 5 semantic domains"
+
+features:
+  multi_domain: true
+  task_variants: 21
+  session_management: true
+  leaderboard: true
+  multi_agent: false
+
+domains:
+  - warehouse_management
+  - supply_chain_logistics
+  - demand_forecasting
+  - production_scheduling
+  - dynamic_resource_allocation
+
 tasks:
+  # Domain 1: Warehouse Management (6 tasks)
   - id: warehouse_easy
-    name: "Single Warehouse Inventory"
-    description: "Easy task: Manage inventory in a single warehouse with fixed demand patterns"
+    name: "Warehouse Easy"
+    description: "1 warehouse, fixed demand, 30 steps"
     difficulty: easy
+    domain: warehouse_management
+  - id: warehouse_easy_volatile
+    name: "Warehouse Easy - Volatile Demand"
+    description: "1 warehouse, variable demand, 30 steps"
+    difficulty: easy
+    domain: warehouse_management
   - id: warehouse_medium
-    name: "Multi-Warehouse Network"
-    description: "Medium task: Optimize 3 warehouses with variable demand and transfer costs"
+    name: "Warehouse Medium"
+    description: "3 warehouses, variable demand, 60 steps"
     difficulty: medium
+    domain: warehouse_management
+  - id: warehouse_medium_volatile
+    name: "Warehouse Medium - Volatile Demand"
+    description: "3 warehouses, high volatility, 60 steps"
+    difficulty: medium
+    domain: warehouse_management
   - id: warehouse_hard
-    name: "Complex Supply Chain"
-    description: "Hard task: Manage 5 warehouses with seasonal demand and supplier constraints"
+    name: "Warehouse Hard"
+    description: "5 warehouses, seasonal demand, constraints, 90 steps"
     difficulty: hard
+    domain: warehouse_management
+  - id: warehouse_hard_stress
+    name: "Warehouse Hard - Stress Test"
+    description: "5 warehouses, extreme volatility, tight constraints, 90 steps"
+    difficulty: hard
+    domain: warehouse_management
+
+  # Domain 2: Supply Chain Logistics (4 tasks)
+  - id: supply_chain_basic
+    name: "Supply Chain - Basic"
+    description: "2-tier supplier network with fixed lead times, 40 steps"
+    difficulty: easy
+    domain: supply_chain_logistics
+  - id: supply_chain_dynamic
+    name: "Supply Chain - Dynamic Pricing"
+    description: "3-tier network with dynamic pricing and variable lead times, 60 steps"
+    difficulty: medium
+    domain: supply_chain_logistics
+  - id: supply_chain_disruption
+    name: "Supply Chain - Disruption"
+    description: "4-tier network with supplier disruptions and recovery, 80 steps"
+    difficulty: hard
+    domain: supply_chain_logistics
+  - id: supply_chain_optimization
+    name: "Supply Chain - Optimization"
+    description: "Full network optimization with cost minimization and constraint satisfaction, 100 steps"
+    difficulty: hard
+    domain: supply_chain_logistics
+
+  # Domain 3: Demand Forecasting (4 tasks)
+  - id: forecast_stationary
+    name: "Forecasting - Stationary"
+    description: "Constant demand with Gaussian noise, 50 steps"
+    difficulty: easy
+    domain: demand_forecasting
+  - id: forecast_seasonal
+    name: "Forecasting - Seasonal"
+    description: "Seasonal patterns with 80% predictability, 90 steps"
+    difficulty: medium
+    domain: demand_forecasting
+  - id: forecast_trend
+    name: "Forecasting - Trend"
+    description: "Linear and non-linear trends with noise, 100 steps"
+    difficulty: medium
+    domain: demand_forecasting
+  - id: forecast_chaotic
+    name: "Forecasting - Chaotic"
+    description: "Chaotic patterns with 50% predictability (adversarial), 120 steps"
+    difficulty: hard
+    domain: demand_forecasting
+
+  # Domain 4: Production Scheduling (4 tasks)
+  - id: production_simple
+    name: "Production - Simple"
+    description: "Single machine, 5 jobs, no precedence constraints, 30 steps"
+    difficulty: easy
+    domain: production_scheduling
+  - id: production_complex
+    name: "Production - Complex"
+    description: "3 machines, 20 jobs with precedence and setup times, 60 steps"
+    difficulty: medium
+    domain: production_scheduling
+  - id: production_flexible
+    name: "Production - Flexible"
+    description: "5 machines, 30 jobs with flexible routing, 90 steps"
+    difficulty: hard
+    domain: production_scheduling
+  - id: production_realtime
+    name: "Production - Real-time"
+    description: "Real-time job arrivals, dynamic rescheduling, 120 steps"
+    difficulty: hard
+    domain: production_scheduling
+
+  # Domain 5: Dynamic Resource Allocation (3 tasks)
+  - id: resource_basic
+    name: "Resource Allocation - Basic"
+    description: "5 resources, 10 consumers, 50 steps"
+    difficulty: easy
+    domain: dynamic_resource_allocation
+  - id: resource_advanced
+    name: "Resource Allocation - Advanced"
+    description: "20 resources, 50 consumers with prioritization, 80 steps"
+    difficulty: medium
+    domain: dynamic_resource_allocation
+  - id: resource_extreme
+    name: "Resource Allocation - Extreme"
+    description: "100 resources, 200 consumers with SLA constraints, 150 steps"
+    difficulty: hard
+    domain: dynamic_resource_allocation
 
 api:
   host: "0.0.0.0"
-  port: 5000
+  port: 7860
   endpoints:
+    - path: "/health"
+      method: "GET"
+      description: "Health check endpoint"
+    - path: "/manifest"
+      method: "GET"
+      description: "Get environment manifest and specification"
+    - path: "/tasks"
+      method: "GET"
+      description: "List all available tasks"
     - path: "/reset"
       method: "POST"
       description: "Reset environment to initial state"
@@ -27,26 +153,30 @@ api:
       description: "Execute one environment step"
     - path: "/state"
       method: "GET"
-      description: "Get current state"
+      description: "Get current environment state"
     - path: "/render"
       method: "GET"
       description: "Render environment visualization"
+    - path: "/sessions"
+      method: "GET"
+      description: "Get active sessions"
+    - path: "/leaderboard"
+      method: "GET"
+      description: "Get leaderboard rankings"
+    - path: "/stats"
+      method: "GET"
+      description: "Get environment statistics"
+    - path: "/docs"
+      method: "GET"
+      description: "Interactive API documentation"
 
 observation_space:
   type: "dict"
-  properties:
-    warehouse_levels: "array of current inventory levels (0-1000 units per warehouse)"
-    demand_forecast: "array of forecasted demand for next step"
-    supplier_status: "array of supplier availability (0-1)"
-    day: "current simulation day (0-365)"
-    holding_costs: "cumulative holding cost"
-    shortage_penalty: "cumulative shortage penalty"
+  description: "Task-specific state representation"
 
 action_space:
   type: "dict"
-  properties:
-    reorder_quantities: "array of unit quantities to reorder at each warehouse"
-    transfers: "matrix of inter-warehouse transfer quantities"
+  description: "Task-specific action specification"
 
 reward_function: "Service level (80% minimum) - 0.1*(holding_cost + shortage_penalty)/max_possible"
 
