@@ -14,7 +14,7 @@ class TimeoutError(Exception):
 class SandboxExecutor:
     """Safe execution environment with timeout and restricted access."""
     
-    # Restricted builtins (similar to APEX)
+    # Restricted builtins for security
     RESTRICTED_BUILTINS = {
         '__import__': None,
         'open': None,

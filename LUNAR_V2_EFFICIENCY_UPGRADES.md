@@ -357,7 +357,7 @@ Overall:
 
 ### Features Added
 1. **Task Expansion**: +10 tasks across all domains
-2. **Reward Scaling**: APEX-style 0.1-1.0 never-binary scale
+2. **Reward Scaling**: 0.1-1.0 never-binary scale for continuous learning
 3. **Multi-Worker**: SQLite hybrid persistence for HF Spaces
 4. **Scalability**: From 100 session limit → unlimited (disk-only)
 5. **Code Safety**: Sandbox with timeout + import restrictions
@@ -416,7 +416,7 @@ pytest tests_v2_enhanced.py -v
 - ✅ **Scalability**: Unlimited sessions on disk
 - ✅ **Safety**: Timeout + import sandbox
 - ✅ **Fairness**: Never-zero reward scale
-- ✅ **Diversity**: 31 tasks vs APEX's 29
+- ✅ **Diversity**: 31 comprehensive tasks across 5 domains
 
 ---
 
