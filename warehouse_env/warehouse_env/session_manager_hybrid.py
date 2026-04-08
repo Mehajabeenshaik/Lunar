@@ -39,7 +39,6 @@ class SessionManager:
                     CREATE TABLE IF NOT EXISTS sessions (
                         session_id TEXT PRIMARY KEY,
                         task TEXT NOT NULL,
-                        state_json TEXT,
                         rewards_json TEXT,
                         step_count INTEGER DEFAULT 0,
                         best_reward REAL DEFAULT 0.0,
@@ -53,7 +52,7 @@ class SessionManager:
             print(f"Warning: Could not initialize SQLite DB: {e}")
     
     def _persist_session(self, session_id: str):
-        """Persist session state to SQLite."""
+        """Persist session state to SQLite for multi-worker access."""
         try:
             if session_id not in self.session_metadata:
                 return
@@ -75,14 +74,14 @@ class SessionManager:
                     meta.get("best_reward", 0.0),
                     meta.get("created_at", datetime.now().isoformat()),
                     datetime.now().isoformat(),
-                    meta.get("done", False),
+                    int(meta.get("done", False)),
                 ))
                 conn.commit()
         except Exception as e:
             print(f"Warning: Could not persist session {session_id}: {e}")
     
     def _load_session_from_db(self, session_id: str) -> Optional[Dict]:
-        """Load session from SQLite if not in memory."""
+        """Load session from SQLite if not in memory (cross-worker access)."""
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.execute(
@@ -94,16 +93,17 @@ class SessionManager:
                     return {
                         'session_id': row[0],
                         'task': row[1],
-                        'rewards': json.loads(row[3] or '[]'),
-                        'steps': row[4],
-                        'best_reward': row[5],
-                        'created_at': row[6],
+                        'rewards': json.loads(row[2] or '[]'),
+                        'steps': row[3],
+                        'best_reward': row[4],
+                        'created_at': row[5],
+                        'done': bool(row[7]),
                     }
         except Exception as e:
             print(f"Warning: Could not load session from DB: {e}")
         return None
     
-
+    def _cleanup_old_sessions(self):
         """Remove sessions older than timeout to prevent memory leaks."""
         now = datetime.now()
         expired = []
@@ -114,7 +114,7 @@ class SessionManager:
                 if now - created_at > self.session_timeout:
                     expired.append(session_id)
             except:
-                pass  # Skip on parse error
+                pass
         
         for session_id in expired:
             self.delete_session(session_id)
@@ -122,11 +122,9 @@ class SessionManager:
         return len(expired)
     
     def create_session(self, task: str) -> str:
-        """Create new session with unique ID."""
-        # Cleanup old sessions to manage memory
+        """Create new session with unique ID. Persists to SQLite."""
         self._cleanup_old_sessions()
         
-        # If at capacity, cleanup oldest session
         if len(self.sessions) >= self.max_sessions:
             oldest = min(
                 self.session_metadata.items(),
@@ -141,8 +139,13 @@ class SessionManager:
             "created_at": datetime.now().isoformat(),
             "steps": 0,
             "best_reward": 0.0,
+            "done": False,
         }
         self.session_rewards[session_id] = []
+        
+        # Persist to SQLite for multi-worker support
+        self._persist_session(session_id)
+        
         return session_id
     
     def get_session(self, session_id: str) -> WarehouseEnv:
@@ -158,7 +161,7 @@ class SessionManager:
         return self.session_metadata[session_id]
     
     def record_reward(self, session_id: str, reward: float):
-        """Record reward for session."""
+        """Record reward for session and persist."""
         if session_id not in self.session_rewards:
             self.session_rewards[session_id] = []
         
@@ -171,8 +174,11 @@ class SessionManager:
             reward
         )
         
-        # Update leaderboard (use best reward per session)
+        # Update leaderboard
         self.leaderboard[session_id] = self.session_metadata[session_id]["best_reward"]
+        
+        # Persist immediately for multi-worker access
+        self._persist_session(session_id)
     
     def get_leaderboard(self, limit: int = 10) -> List[dict]:
         """Get top sessions by reward."""
@@ -196,7 +202,7 @@ class SessionManager:
         return result
     
     def delete_session(self, session_id: str):
-        """Clean up session."""
+        """Clean up session from memory and database."""
         if session_id in self.sessions:
             del self.sessions[session_id]
         if session_id in self.session_metadata:
@@ -205,6 +211,14 @@ class SessionManager:
             del self.session_rewards[session_id]
         if session_id in self.leaderboard:
             del self.leaderboard[session_id]
+        
+        # Also remove from SQLite
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute("DELETE FROM sessions WHERE session_id = ?", (session_id,))
+                conn.commit()
+        except Exception as e:
+            print(f"Warning: Could not delete session from DB: {e}")
     
     def list_sessions(self) -> List[dict]:
         """List all active sessions."""
