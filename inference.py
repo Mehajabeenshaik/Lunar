@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Bulletproof baseline inference for LUNAR RL environment."""
+"""LUNAR OpenEnv Baseline Inference - Uses LLM proxy endpoint provided by validator."""
 
 import os
 import sys
@@ -7,27 +7,45 @@ import json
 import requests
 from typing import Dict, Any, Optional
 
-# Configuration variables
-TASK_NAME = os.getenv("WAREHOUSE_TASK", "warehouse_easy")
-API_BASE_URL = os.getenv("API_BASE_URL", "").strip()
-MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # No default - optional
+# ============================================================
+# ENV VARS - NO FALLBACK DEFAULTS (validator injects these)
+# ============================================================
+# For Phase 2: validator provides API_BASE_URL pointing to LLM proxy
+API_BASE_URL = os.getenv("API_BASE_URL", "")  # Empty if not provided
+API_KEY = os.getenv("API_KEY") or os.getenv("OPENAI_API_KEY")  # Accept both
 
-# Try multiple endpoints
+TASK_NAME = os.getenv("WAREHOUSE_TASK", "warehouse_easy")
+MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
+
+# Try multiple endpoints for environment
 DEFAULT_ENDPOINTS = [
-    API_BASE_URL or None,  # Environment override
     "https://mehajabeen-lunar.hf.space",  # HF Spaces production
     "http://localhost:7860",  # Local development
 ]
 
-# Remove None values
-ENDPOINTS = [e for e in DEFAULT_ENDPOINTS if e]
+# ============================================================
+# OPENAI CLIENT - Routes through LLM proxy if API_BASE_URL set
+# ============================================================
+client = None
+HAS_LLM = False
 
-# LLM support - will use API_BASE_URL (LiteLLM proxy) if provided
-HAS_LLM = bool(API_BASE_URL or OPENAI_API_KEY)
+try:
+    from openai import OpenAI
+    # Initialize OpenAI client - if API_BASE_URL is set, requests go through proxy!
+    if API_BASE_URL and API_KEY:
+        client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+        HAS_LLM = True
+    elif API_KEY:
+        # Fallback to direct OpenAI if only API_KEY provided (no proxy)
+        client = OpenAI(api_key=API_KEY)
+        HAS_LLM = True
+except Exception:
+    client = None
+    HAS_LLM = False
 
 # Track which endpoint works
 WORKING_ENDPOINT = None
+ENDPOINTS = [e for e in DEFAULT_ENDPOINTS if e]
 
 
 def reset_environment() -> Optional[Dict[str, Any]]:
@@ -92,7 +110,7 @@ def step_environment(session_id: str, action: Dict) -> Dict[str, Any]:
 
 
 def generate_action(observation: Dict) -> Dict:
-    """Generate action using LLM (via API_BASE_URL) or default strategy."""
+    """Generate action using LLM (via proxy if configured) or default strategy."""
     # Default strategy
     num_warehouses = len(observation.get("warehouse_levels", [1]))
     default_action = {
@@ -100,7 +118,7 @@ def generate_action(observation: Dict) -> Dict:
         "transfers": [[0.0] * num_warehouses for _ in range(num_warehouses)]
     }
     
-    if not HAS_LLM:
+    if not HAS_LLM or not client:
         return default_action
     
     try:
@@ -115,41 +133,16 @@ Generate optimal action as JSON:
 
 Respond ONLY with valid JSON."""
         
-        # PREFER API_BASE_URL (through LiteLLM proxy) over direct OpenAI
-        if API_BASE_URL:
-            # Call through API_BASE_URL - this is what the validator checks!
-            url = f"{API_BASE_URL.rstrip('/')}/v1/chat/completions"
-            headers = {"Content-Type": "application/json"}
-            if OPENAI_API_KEY:
-                headers["Authorization"] = f"Bearer {OPENAI_API_KEY}"
-            
-            payload = {
-                "model": MODEL_NAME,
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.7,
-                "max_tokens": 150
-            }
-            
-            response = requests.post(url, json=payload, headers=headers, timeout=10)
-            response.raise_for_status()
-            result = response.json()
-            response_text = result["choices"][0]["message"]["content"] if result.get("choices") else ""
-        else:
-            # Fallback: direct OpenAI if API_BASE_URL not provided
-            if not OPENAI_API_KEY:
-                return default_action
-            
-            from openai import OpenAI
-            client = OpenAI(api_key=OPENAI_API_KEY)
-            response = client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.7,
-                max_tokens=150
-            )
-            response_text = response.choices[0].message.content if response.choices else ""
+        # Call client - if base_url is set, request goes through LLM proxy!
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+            max_tokens=150
+        )
         
         # Extract JSON from response
+        response_text = response.choices[0].message.content if response.choices else ""
         start = response_text.find("{")
         end = response_text.rfind("}") + 1
         if start >= 0 and end > start:
