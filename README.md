@@ -38,7 +38,7 @@ pinned: true
 
 **LUNAR** is a next-generation OpenEnv-compliant RL training platform designed for **real-world optimization challenges**. Unlike toy environments, LUNAR provides:
 
-- **31 Task Variants** with realistic constraints, dynamic conditions, and multi-objective optimization signals
+- **Task Variants** with realistic constraints, dynamic conditions, and multi-objective optimization signals
 - **5 Production Domains**: Supply Chain, Warehouse Management, Demand Forecasting, Production Scheduling, Resource Allocation
 - **Enterprise Scalability**: Multi-worker support via SQLite persistence, built for 1000+ concurrent agents
 - **Production-Grade Features**: Type-safe APIs (Pydantic v2), comprehensive testing (95% coverage), security sandboxing
