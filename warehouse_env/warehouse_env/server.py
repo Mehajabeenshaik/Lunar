@@ -2,9 +2,9 @@
 
 import os
 import asyncio
-from typing import Optional
+from typing import Optional, Any, Dict, List
 from fastapi import FastAPI, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import uvicorn
 
 from .env import WarehouseEnv
@@ -26,30 +26,74 @@ manager = SessionManager(max_sessions=100, session_timeout_hours=2)
 
 
 class ResetRequest(BaseModel):
-    task: Optional[str] = None
+    task: Optional[str] = Field(None, description="Task ID (e.g., warehouse_easy, supply_chain_basic)")
 
 
 class ResetResponse(BaseModel):
-    observation: dict
-    task: str
-    session_id: str = None
+    observation: Dict[str, Any] = Field(..., description="Initial observation state")
+    task: str = Field(..., description="Selected task ID")
+    session_id: Optional[str] = Field(None, description="Session ID for subsequent requests")
 
 
 class StepRequest(BaseModel):
-    action: dict
+    action: Dict[str, Any] = Field(..., description="Action to execute in the environment")
 
 
 class StepResponse(BaseModel):
-    observation: dict
-    reward: float
-    done: bool
-    info: dict
+    observation: Dict[str, Any] = Field(..., description="Updated observation state")
+    reward: float = Field(..., description="Reward signal (0.0-1.0)")
+    done: bool = Field(..., description="Episode termination flag")
+    info: Dict[str, Any] = Field(..., description="Additional step information")
 
 
 class StateResponse(BaseModel):
-    state: dict
-    task: str
-    episode_rewards: list
+    state: Dict[str, Any] = Field(..., description="Complete environment state")
+    task: str = Field(..., description="Current task ID")
+    episode_rewards: List[float] = Field(..., description="Cumulative rewards per episode")
+
+
+class HealthResponse(BaseModel):
+    status: str = Field(..., description="Server status")
+    version: str = Field(..., description="API version")
+    active_sessions: int = Field(..., description="Number of active sessions")
+    max_sessions: int = Field(..., description="Maximum concurrent sessions")
+
+
+class StatsResponse(BaseModel):
+    server_stats: Dict[str, Any] = Field(..., description="Server statistics")
+    available_tasks: int = Field(..., description="Number of available tasks")
+    total_leaderboard_entries: int = Field(..., description="Total leaderboard entries")
+
+
+class TasksListResponse(BaseModel):
+    total: int = Field(..., description="Total number of tasks")
+    tasks: Dict[str, Any] = Field(..., description="Task specifications")
+
+
+class SessionsListResponse(BaseModel):
+    active_sessions: int = Field(..., description="Number of active sessions")
+    sessions: List[str] = Field(..., description="List of session IDs")
+
+
+class LeaderboardResponse(BaseModel):
+    total_sessions: int = Field(..., description="Total sessions recorded")
+    leaderboard: List[Dict[str, Any]] = Field(..., description="Top sessions by reward")
+
+
+class ManifestResponse(BaseModel):
+    version: str = Field(..., description="API version")
+    name: str = Field(..., description="Environment name")
+    description: str = Field(..., description="Environment description")
+    observation_space: Dict[str, Any] = Field(..., description="Observation space specification")
+    action_space: Dict[str, Any] = Field(..., description="Action space specification")
+    reward_space: Dict[str, Any] = Field(..., description="Reward space specification")
+    tasks: List[str] = Field(..., description="Available tasks")
+    domains: List[str] = Field(..., description="Domains covered")
+    features: Dict[str, Any] = Field(..., description="Available features")
+
+
+class RenderResponse(BaseModel):
+    render: str = Field(..., description="Rendered environment visualization")
 
 
 @app.post("/reset", response_model=ResetResponse)
@@ -127,50 +171,50 @@ async def state(session_id: str = Query(...)):
 
 
 @app.get("/render")
-async def render(session_id: str = Query(None)):
+async def render(session_id: str = Query(None)) -> RenderResponse:
     """Render environment visualization."""
     
     if not session_id:
-        return {"render": "No session provided"}
+        return RenderResponse(render="No session provided")
     
     try:
         env = manager.get_session(session_id)
     except ValueError:
-        return {"render": "Session not found"}
+        return RenderResponse(render="Session not found")
     
-    return {"render": env.render()}
+    return RenderResponse(render=env.render())
 
 
-@app.get("/health")
+@app.get("/health", response_model=HealthResponse)
 async def health():
     """Health check endpoint with system stats."""
     stats = manager.get_stats()
-    return {
-        "status": "ok",
-        "version": "3.0.0",
-        "active_sessions": stats["total_sessions"],
-        "max_sessions": stats["max_sessions"],
-    }
+    return HealthResponse(
+        status="ok",
+        version="3.0.0",
+        active_sessions=stats["total_sessions"],
+        max_sessions=stats["max_sessions"],
+    )
 
 
-@app.get("/stats")
+@app.get("/stats", response_model=StatsResponse)
 async def stats():
     """Get detailed server statistics."""
-    return {
-        "server_stats": manager.get_stats(),
-        "available_tasks": len(get_task_variants()),
-        "total_leaderboard_entries": len(manager.leaderboard),
-    }
+    return StatsResponse(
+        server_stats=manager.get_stats(),
+        available_tasks=len(get_task_variants()),
+        total_leaderboard_entries=len(manager.leaderboard),
+    )
 
 
-@app.get("/manifest")
+@app.get("/manifest", response_model=ManifestResponse)
 async def manifest():
     """Return OpenEnv specification for this environment."""
-    return {
-        "version": "3.0.0",
-        "name": "LUNAR: Multi-Domain RL Environment",
-        "description": "Multi-domain optimization including warehouse management, supply chain, demand forecasting, production scheduling, and resource allocation",
-        "observation_space": {
+    return ManifestResponse(
+        version="3.0.0",
+        name="LUNAR: Multi-Domain RL Environment",
+        description="Multi-domain optimization including warehouse management, supply chain, demand forecasting, production scheduling, and resource allocation",
+        observation_space={
             "type": "object",
             "properties": {
                 "warehouse_levels": {"type": "array", "items": {"type": "number"}},
@@ -181,14 +225,14 @@ async def manifest():
                 "shortage_penalty": {"type": "number"},
             }
         },
-        "action_space": {
+        action_space={
             "type": "object",
             "properties": {
                 "reorder_quantities": {"type": "array", "items": {"type": "number"}},
                 "transfers": {"type": "array", "items": {"type": "array"}},
             }
         },
-        "reward_space": {
+        reward_space={
             "type": "object",
             "properties": {
                 "value": {"type": "number", "minimum": 0.0, "maximum": 1.0},
@@ -196,15 +240,15 @@ async def manifest():
                 "info": {"type": "object"},
             }
         },
-        "tasks": list(get_task_variants().keys()),
-        "domains": [
+        tasks=list(get_task_variants().keys()),
+        domains=[
             "warehouse_management",
             "supply_chain_logistics",
             "demand_forecasting",
             "production_scheduling",
             "dynamic_resource_allocation"
         ],
-        "features": {
+        features={
             "multi_agent": True,
             "session_management": True,
             "automatic_cleanup": True,
@@ -212,25 +256,25 @@ async def manifest():
             "task_variants": len(get_task_variants()),
             "multi_domain": True,
         }
-    }
+    )
 
 
-@app.get("/tasks")
+@app.get("/tasks", response_model=TasksListResponse)
 async def list_tasks():
     """List all available task variants."""
-    return {
-        "total": len(get_task_variants()),
-        "tasks": get_task_variants()
-    }
+    return TasksListResponse(
+        total=len(get_task_variants()),
+        tasks=get_task_variants()
+    )
 
 
-@app.get("/sessions")
+@app.get("/sessions", response_model=SessionsListResponse)
 async def list_sessions():
     """List all active sessions."""
-    return {
-        "active_sessions": len(manager.sessions),
-        "sessions": manager.list_sessions()
-    }
+    return SessionsListResponse(
+        active_sessions=len(manager.sessions),
+        sessions=manager.list_sessions()
+    )
 
 
 @app.delete("/sessions/{session_id}")
@@ -243,16 +287,16 @@ async def delete_session(session_id: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.get("/leaderboard")
+@app.get("/leaderboard", response_model=LeaderboardResponse)
 async def leaderboard(limit: int = Query(10, ge=1, le=100)):
     """Get top sessions by reward."""
-    return {
-        "total_sessions": len(manager.leaderboard),
-        "leaderboard": manager.get_leaderboard(limit=limit)
-    }
+    return LeaderboardResponse(
+        total_sessions=len(manager.leaderboard),
+        leaderboard=manager.get_leaderboard(limit=limit)
+    )
 
 
-@app.get("/")
+@app.get("/", response_model=Dict[str, Any])
 async def root():
     """Welcome endpoint - redirects to API documentation."""
     return {
