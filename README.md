@@ -401,9 +401,9 @@ Hard/Easy ratio: 0.57 (distinguishes true frontier tasks)
 
 To reproduce baseline scores:
 ```bash
-export OPENAI_API_KEY=your_key_here
+export HF_TOKEN=your_huggingface_token_here
 export API_BASE_URL=https://mehajabeen-lunar.hf.space
-export MODEL_NAME=gpt-4o-mini  # or any OpenAI-compatible model
+export MODEL_NAME=meta-llama/Llama-2-7b-chat-hf  # HuggingFace model
 
 python inference.py  # Runs full benchmark, generates [START][STEP][END] logs
 ```
