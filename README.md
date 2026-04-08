@@ -29,8 +29,9 @@ pinned: true
 |:---:|:---|
 | **📜 GitHub Repository** | [github.com/Mehajabeenshaik/Lunar](https://github.com/Mehajabeenshaik/Lunar) |
 | **🚀 Live API (HF Spaces)** | [huggingface.co/spaces/mehajabeen/lunar](https://huggingface.co/spaces/mehajabeen/lunar) |
-| **📚 Swagger UI Documentation** | [API Docs](https://huggingface.co/spaces/mehajabeen/lunar/raw/file/swagger-ui.html) |
-| **🎮 Interactive Playground** | [huggingface.co/spaces/mehajabeen/lunar](https://huggingface.co/spaces/mehajabeen/lunar) |
+| **🤖 Swagger UI (Interactive API Docs)** | [mehajabeen-lunar.hf.space/docs](https://mehajabeen-lunar.hf.space/docs) |
+| **🎮 Local Swagger UI** | [localhost:7860/docs](http://localhost:7860/docs) |
+| **📊 OpenAPI Schema** | [mehajabeen-lunar.hf.space/openapi.json](https://mehajabeen-lunar.hf.space/openapi.json) |
 
 ---
 
@@ -136,6 +137,33 @@ docker run --gpus all -p 7860:7860 lunar-env
 
 # Access at http://localhost:7860
 ```
+
+---
+
+## 🤖 Interactive Swagger UI
+
+**Try the API instantly without coding!**
+
+### Live Swagger UI (HF Spaces)
+👉 **[mehajabeen-lunar.hf.space/docs](https://mehajabeen-lunar.hf.space/docs)**
+- ✅ Full interactive documentation
+- ✅ Test endpoints directly from browser
+- ✅ Real-time request/response visualization
+- ✅ Try all 21 tasks and environments
+
+### Local Swagger UI
+👉 **[localhost:7860/docs](http://localhost:7860/docs)** (after running locally)
+- Perfect for development and testing
+- Full endpoint exploration
+- Real-time API feedback
+
+### Features in Swagger UI
+- 📋 Complete endpoint documentation
+- 🧪 Execute API calls with example payloads
+- 📊 View request/response schemas
+- 🔍 Inspect all 21 task configurations
+- 💾 Session management interface
+- 🏆 Leaderboard queries
 
 ---
 
