@@ -155,7 +155,11 @@ def run_episode(task: str, env: WarehouseEnv):
             break
     
     # Calculate final score
-    from warehouse_env.graders import get_grader
+    try:
+        from warehouse_env.warehouse_env.graders import get_grader
+    except ImportError:
+        from warehouse_env.graders import get_grader
+    
     grader = get_grader(task)
     grade_result = grader.grade(env.state, episode_rewards)
     score = grade_result["score"]
