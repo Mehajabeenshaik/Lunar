@@ -1,9 +1,11 @@
 """FastAPI server for warehouse environment."""
 
 import os
+import sys
 import asyncio
+import traceback
 from typing import Optional, Any, Dict, List
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Body
 from pydantic import BaseModel, Field, field_validator
 import uvicorn
 
@@ -109,28 +111,39 @@ class RenderResponse(BaseModel):
 
 
 @app.post("/reset", response_model=ResetResponse)
-async def reset(req: Optional[ResetRequest] = None, session_id: str = Query(None)):
+async def reset(req: Optional[ResetRequest] = Body(None), session_id: str = Query(None)):
     """Reset environment to initial state (create new session if needed)."""
-    
-    # Create default request if none provided
-    if not req:
-        req = ResetRequest(task="warehouse_easy")
-    
-    # Task is already validated and cleaned by Pydantic
-    task = req.task
-    
-    # Create or reuse session
-    if not session_id:
-        session_id = manager.create_session(task)
-    
-    env = manager.get_session(session_id)
-    obs = env.reset()
-    
-    return ResetResponse(
-        observation=obs.model_dump(),
-        task=task,
-        session_id=session_id  # Return session ID for future requests
-    )
+    try:
+        # Create default request if none provided
+        if not req:
+            req = ResetRequest(task="warehouse_easy")
+        
+        # Task is already validated and cleaned by Pydantic
+        task = req.task
+        
+        # Validate task exists
+        if not is_valid_task(task):
+            raise HTTPException(status_code=400, detail=f"Unknown task: {task}. Valid tasks: {list(get_task_variants().keys())}")
+        
+        # Create or reuse session
+        if not session_id:
+            session_id = manager.create_session(task)
+        
+        env = manager.get_session(session_id)
+        obs = env.reset()
+        
+        return ResetResponse(
+            observation=obs.model_dump(),
+            task=task,
+            session_id=session_id
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Log the full error for debugging
+        error_detail = f"Reset failed: {str(e)}\n{traceback.format_exc()}"
+        print(error_detail, file=sys.stderr)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @app.post("/step", response_model=StepResponse)
