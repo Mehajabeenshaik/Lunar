@@ -26,7 +26,11 @@ manager = SessionManager(max_sessions=100, session_timeout_hours=2)
 
 
 class ResetRequest(BaseModel):
-    task: Optional[str] = Field(None, description="Task ID (e.g., warehouse_easy, supply_chain_basic)")
+    task: Optional[str] = Field(
+        "warehouse_easy",
+        description="Task ID (e.g., warehouse_easy, warehouse_medium, supply_chain_basic, forecast_stationary, production_simple, resource_basic). Defaults to warehouse_easy if not provided.",
+        examples=["warehouse_easy", "warehouse_medium", "supply_chain_basic"]
+    )
 
 
 class ResetResponse(BaseModel):
@@ -100,8 +104,14 @@ class RenderResponse(BaseModel):
 async def reset(req: Optional[ResetRequest] = None, session_id: str = Query(None)):
     """Reset environment to initial state (create new session if needed)."""
     
-    # Determine task
-    task = req.task if req and req.task else os.getenv("WAREHOUSE_TASK", "warehouse_easy")
+    # Determine task - handle Swagger placeholder "string" and None values
+    default_task = os.getenv("WAREHOUSE_TASK", "warehouse_easy")
+    task = None
+    
+    if req and req.task and req.task != "string":
+        task = req.task
+    else:
+        task = default_task
     
     # Validate task
     if not is_valid_task(task):
