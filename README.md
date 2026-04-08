@@ -8,12 +8,11 @@ pinned: true
 
 <div align="center">
 
-# 🌙 LUNAR: Enterprise-Grade Multi-Domain RL Platform
+#  LUNAR: Enterprise-Grade Multi-Domain RL Platform
 
 <p>
   <strong>Production-Ready RL Environment for Real-World Optimization</strong>
   <br>
-  <em>31 sophisticated task variants • 5 production domains • Enterprise-grade infrastructure</em>
 </p>
 
 [![GitHub](https://img.shields.io/badge/GitHub-Lunar-black?style=flat-square&logo=github)](https://github.com/Mehajabeenshaik/Lunar)
@@ -23,23 +22,23 @@ pinned: true
 
 ---
 
-## 🎯 Quick Links
+##  Quick Links
 
 | 🔗 Resource | 🌐 URL |
 |:---:|:---|
-| **📜 GitHub Repository** | [github.com/Mehajabeenshaik/Lunar](https://github.com/Mehajabeenshaik/Lunar) |
-| **🚀 Live API (HF Spaces)** | [huggingface.co/spaces/mehajabeen/lunar](https://huggingface.co/spaces/mehajabeen/lunar) |
-| **🤖 Swagger UI (Interactive API Docs)** | [mehajabeen-lunar.hf.space/docs](https://mehajabeen-lunar.hf.space/docs) |
-| **🎮 Local Swagger UI** | [localhost:7860/docs](http://localhost:7860/docs) |
-| **📊 OpenAPI Schema** | [mehajabeen-lunar.hf.space/openapi.json](https://mehajabeen-lunar.hf.space/openapi.json) |
+| ** GitHub Repository** | [github.com/Mehajabeenshaik/Lunar](https://github.com/Mehajabeenshaik/Lunar) |
+| ** Live API (HF Spaces)** | [huggingface.co/spaces/mehajabeen/lunar](https://huggingface.co/spaces/mehajabeen/lunar) |
+| ** Swagger UI (Interactive API Docs)** | [mehajabeen-lunar.hf.space/docs](https://mehajabeen-lunar.hf.space/docs) |
+| ** Local Swagger UI** | [localhost:7860/docs](http://localhost:7860/docs) |
+| ** OpenAPI Schema** | [mehajabeen-lunar.hf.space/openapi.json](https://mehajabeen-lunar.hf.space/openapi.json) |
 
 ---
 
-## ✨ What is LUNAR?
+##  What is LUNAR?
 
 **LUNAR** is a next-generation OpenEnv-compliant RL training platform designed for **real-world optimization challenges**. Unlike toy environments, LUNAR provides:
 
-- **31 Task Variants** with realistic constraints, dynamic conditions, and multi-objective optimization signals
+- **Task Variants** with realistic constraints, dynamic conditions, and multi-objective optimization signals
 - **5 Production Domains**: Supply Chain, Warehouse Management, Demand Forecasting, Production Scheduling, Resource Allocation
 - **Enterprise Scalability**: Multi-worker support via SQLite persistence, built for 1000+ concurrent agents
 - **Production-Grade Features**: Type-safe APIs (Pydantic v2), comprehensive testing (95% coverage), security sandboxing
@@ -49,9 +48,9 @@ pinned: true
 
 ---
 
-## 🎯 Core Features
+##  Core Features
 
-### 🏆 31 Sophisticated Task Variants
+###   Sophisticated Task Variants
 ```
 Warehouse Management    → 10 tasks  (inventory optimization, demand variability, network effects)
 Supply Chain Logistics  → 7 tasks   (multi-tier networks, disruption resilience, cost optimization)
@@ -62,7 +61,7 @@ Resource Allocation     → 5 tasks   (real-time management, load balancing, SLA
 TOTAL: 31 Production-Ready Environments
 ```
 
-### 📊 Multi-Objective Reward Grading
+###  Multi-Objective Reward Grading
 ```
 Domain-Specific Scorers with 5-7 Weighted Metrics:
 ├─ Warehouse:     Service(40%) + Cost(30%) + Consistency(20%) + Network(10%)
@@ -74,14 +73,14 @@ Domain-Specific Scorers with 5-7 Weighted Metrics:
 Never-Binary Scale: 0.1-1.0 (no demotivating zeros!)
 ```
 
-### ⚡ Enterprise Infrastructure
+###  Enterprise Infrastructure
 - **SQLite Persistence**: Unlimited session scaling, cross-worker state sharing
 - **Code Sandbox**: Restricted execution environment, 5-second timeout protection
 - **Performance**: 4X optimization (3 min benchmarks vs 12 min baseline)
 - **Security**: Blocked dangerous imports, pre-execution validation
 - **Reliability**: 95% test coverage, comprehensive error handling
 
-### 🔌 Complete REST API
+###  Complete REST API
 ```python
 12+ OpenEnv-Compliant Endpoints:
 ├─ POST   /reset              → Create/reset agent session
@@ -98,7 +97,7 @@ Never-Binary Scale: 0.1-1.0 (no demotivating zeros!)
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Option 1: Live API (No Installation)
 ```bash
@@ -140,34 +139,34 @@ docker run --gpus all -p 7860:7860 lunar-env
 
 ---
 
-## 🤖 Interactive Swagger UI
+##  Interactive Swagger UI
 
 **Try the API instantly without coding!**
 
 ### Live Swagger UI (HF Spaces)
-👉 **[mehajabeen-lunar.hf.space/docs](https://mehajabeen-lunar.hf.space/docs)**
+ **[mehajabeen-lunar.hf.space/docs](https://mehajabeen-lunar.hf.space/docs)**
 - ✅ Full interactive documentation
 - ✅ Test endpoints directly from browser
 - ✅ Real-time request/response visualization
 - ✅ Try all 31 tasks and environments
 
 ### Local Swagger UI
-👉 **[localhost:7860/docs](http://localhost:7860/docs)** (after running locally)
+ **[localhost:7860/docs](http://localhost:7860/docs)** (after running locally)
 - Perfect for development and testing
 - Full endpoint exploration
 - Real-time API feedback
 
 ### Features in Swagger UI
-- 📋 Complete endpoint documentation
-- 🧪 Execute API calls with example payloads
-- 📊 View request/response schemas
-- 🔍 Inspect all 31 task configurations
-- 💾 Session management interface
-- 🏆 Leaderboard queries
+- Complete endpoint documentation
+- Execute API calls with example payloads
+- View request/response schemas
+- Inspect all 31 task configurations
+- Session management interface
+- Leaderboard queries
 
 ---
 
-## 📚 API Quick Reference
+##  API Quick Reference
 
 ### Reset Environment (Start Session)
 ```bash
@@ -232,11 +231,10 @@ curl https://mehajabeen-lunar.hf.space/api/leaderboard
 
 ---
 
-## 📊 Performance Benchmarks
+##  Performance Benchmarks
 
 | Metric | Score | Status |
 |:---|:---:|:---:|
-| **Task Complexity** | 31 variants | ✅ 5 domains |
 | **Reward Quality** | 9.7/10 | ✅ 5-7 metrics/domain |
 | **Scalability** | Unlimited | ✅ SQLite persistence |
 | **Performance** | ~3 min | ✅ 4X faster |
@@ -247,9 +245,9 @@ curl https://mehajabeen-lunar.hf.space/api/leaderboard
 
 ---
 
-## 🎓 Domain Deep Dive
+##  Domain Deep Dive
 
-### 1️⃣ Warehouse Management (10 Tasks)
+### 1️ Warehouse Management (10 Tasks)
 Optimize multi-warehouse inventory under variable demand, supply disruptions, and cost constraints.
 
 **Key Challenges:**
@@ -258,7 +256,7 @@ Optimize multi-warehouse inventory under variable demand, supply disruptions, an
 - Inter-warehouse transfer decisions
 - Holding cost vs shortage penalty trade-offs
 
-### 2️⃣ Supply Chain Logistics (7 Tasks)
+### 2️ Supply Chain Logistics (7 Tasks)
 Design resilient multi-tier supplier networks with disruption handling.
 
 **Key Challenges:**
@@ -267,7 +265,7 @@ Design resilient multi-tier supplier networks with disruption handling.
 - Supplier disruptions and recovery
 - Network-wide cost optimization
 
-### 3️⃣ Demand Forecasting (6 Tasks)
+### 3️ Demand Forecasting (6 Tasks)
 Predict and adapt to demand patterns (stationary, seasonal, trending, chaotic).
 
 **Key Challenges:**
@@ -276,7 +274,7 @@ Predict and adapt to demand patterns (stationary, seasonal, trending, chaotic).
 - Adversarial noise (50% unpredictability)
 - Adaptive forecasting strategies
 
-### 4️⃣ Production Scheduling (6 Tasks)
+### 4️ Production Scheduling (6 Tasks)
 Schedule jobs under machine, resource, and time constraints.
 
 **Key Challenges:**
@@ -285,7 +283,7 @@ Schedule jobs under machine, resource, and time constraints.
 - Dynamic job arrivals
 - Real-time rescheduling
 
-### 5️⃣ Resource Allocation (5 Tasks)
+### 5️ Resource Allocation (5 Tasks)
 Allocate limited resources across competing demands with SLA constraints.
 
 **Key Challenges:**
@@ -302,60 +300,60 @@ Allocate limited resources across competing demands with SLA constraints.
 
 | Task ID | Difficulty | Description | Constraints |
 |---------|-----------|-------------|-------------|
-| `warehouse_easy_001` | 🟢 Easy | Simple single-warehouse inventory | 1 warehouse, constant demand |
-| `warehouse_easy_002` | 🟢 Easy | Backup supplier scenario | 1 warehouse, 1 backup supplier |
-| `warehouse_easy_003` | 🟢 Easy | Basic demand forecasting | Predictable seasonal demand |
-| `warehouse_medium_001` | 🟡 Medium | Multi-warehouse network (2 nodes) | 2 warehouses, transfers allowed |
-| `warehouse_medium_002` | 🟡 Medium | Disruption recovery (20% stockout risk) | Single failure scenario |
-| `warehouse_medium_003` | 🟡 Medium | Variable demand (40% volatility) | Dynamic customer demand |
-| `warehouse_hard_001` | 🔴 Hard | 3-warehouse network with cascading failures | Complex topology, multi-failure |
-| `warehouse_hard_002` | 🔴 Hard | Extreme demand variability (90% range) | Chaotic demand patterns |
-| `warehouse_hard_003` | 🔴 Hard | Multi-objective trade-offs (cost vs service) | Competing metrics, no dominance |
-| `warehouse_hard_004` | 🔴 Hard | Full supply chain with real-time rescheduling | 3 warehouses, 5 suppliers, live updates |
+| `warehouse_easy_001` |  Easy | Simple single-warehouse inventory | 1 warehouse, constant demand |
+| `warehouse_easy_002` |  Easy | Backup supplier scenario | 1 warehouse, 1 backup supplier |
+| `warehouse_easy_003` |  Easy | Basic demand forecasting | Predictable seasonal demand |
+| `warehouse_medium_001` |  Medium | Multi-warehouse network (2 nodes) | 2 warehouses, transfers allowed |
+| `warehouse_medium_002` |  Medium | Disruption recovery (20% stockout risk) | Single failure scenario |
+| `warehouse_medium_003` |  Medium | Variable demand (40% volatility) | Dynamic customer demand |
+| `warehouse_hard_001` |  Hard | 3-warehouse network with cascading failures | Complex topology, multi-failure |
+| `warehouse_hard_002` |  Hard | Extreme demand variability (90% range) | Chaotic demand patterns |
+| `warehouse_hard_003` |  Hard | Multi-objective trade-offs (cost vs service) | Competing metrics, no dominance |
+| `warehouse_hard_004` |  Hard | Full supply chain with real-time rescheduling | 3 warehouses, 5 suppliers, live updates |
 
 ### Supply Chain Logistics (7 Tasks)
 
 | Task ID | Difficulty | Description | Constraints |
 |---------|-----------|-------------|-------------|
-| `supply_chain_easy_001` | 🟢 Easy | Linear 2-tier supplier network | Single path, fixed pricing |
-| `supply_chain_easy_002` | 🟢 Easy | Basic cost optimization | Two supplier options per tier |
-| `supply_chain_medium_001` | 🟡 Medium | 3-tier network with lead times | Variable delivery times (2-7 days) |
-| `supply_chain_medium_002` | 🟡 Medium | Single supplier disruption | 50% availability during outage |
-| `supply_chain_hard_001` | 🔴 Hard | Full 4-tier network with dynamic pricing | 8 suppliers, 4 tiers, market fluctuations |
-| `supply_chain_hard_002` | 🔴 Hard | Cascading failures across network | Multi-supplier ripple effects |
-| `supply_chain_hard_003` | 🔴 Hard | Network resilience optimization | Balance cost, speed, reliability |
+| `supply_chain_easy_001` |  Easy | Linear 2-tier supplier network | Single path, fixed pricing |
+| `supply_chain_easy_002` |  Easy | Basic cost optimization | Two supplier options per tier |
+| `supply_chain_medium_001` |  Medium | 3-tier network with lead times | Variable delivery times (2-7 days) |
+| `supply_chain_medium_002` |  Medium | Single supplier disruption | 50% availability during outage |
+| `supply_chain_hard_001` |  Hard | Full 4-tier network with dynamic pricing | 8 suppliers, 4 tiers, market fluctuations |
+| `supply_chain_hard_002` |  Hard | Cascading failures across network | Multi-supplier ripple effects |
+| `supply_chain_hard_003` |  Hard | Network resilience optimization | Balance cost, speed, reliability |
 
 ### Demand Forecasting (6 Tasks)
 
 | Task ID | Difficulty | Description | Constraints |
 |---------|-----------|-------------|-------------|
-| `forecast_easy_001` | 🟢 Easy | Stationary demand (no trend) | Constant mean ± 5% noise |
-| `forecast_easy_002` | 🟢 Easy | Clear seasonal pattern | 12-month cycle, 70% predictability |
-| `forecast_medium_001` | 🟡 Medium | Linear trend with seasonality | Upward trend (5% per period) |
-| `forecast_medium_002` | 🟡 Medium | Autocorrelated demand | Memory effects (3-step dependency) |
-| `forecast_hard_001` | 🔴 Hard | Chaotic with adversarial noise | Random walk + 50% noise |
-| `forecast_hard_002` | 🔴 Hard | Multiple regimes (structural breaks) | 3 different demand patterns, random switches |
+| `forecast_easy_001` |  Easy | Stationary demand (no trend) | Constant mean ± 5% noise |
+| `forecast_easy_002` |  Easy | Clear seasonal pattern | 12-month cycle, 70% predictability |
+| `forecast_medium_001` |  Medium | Linear trend with seasonality | Upward trend (5% per period) |
+| `forecast_medium_002` |  Medium | Autocorrelated demand | Memory effects (3-step dependency) |
+| `forecast_hard_001` |  Hard | Chaotic with adversarial noise | Random walk + 50% noise |
+| `forecast_hard_002` |  Hard | Multiple regimes (structural breaks) | 3 different demand patterns, random switches |
 
 ### Production Scheduling (6 Tasks)
 
 | Task ID | Difficulty | Description | Constraints |
 |---------|-----------|-------------|-------------|
-| `schedule_easy_001` | 🟢 Easy | Single machine, no precedence | 5 jobs, 1 machine, any order |
-| `schedule_easy_002` | 🟢 Easy | Identical parallel machines | 10 jobs, 2 identical machines |
-| `schedule_medium_001` | 🟡 Medium | Job precedence constraints | 8 jobs with dependency graph |
-| `schedule_medium_002` | 🟡 Medium | Resource-constrained (2 types) | 6 jobs, 2 resource types, limited capacity |
-| `schedule_hard_001` | 🔴 Hard | Dynamic arrivals + rescheduling | 20 jobs arriving online, reoptimize continuously |
-| `schedule_hard_002` | 🔴 Hard | NP-hard: 3 machines + precedence + time windows | 15 jobs, 3 machines, complex constraints |
+| `schedule_easy_001` |  Easy | Single machine, no precedence | 5 jobs, 1 machine, any order |
+| `schedule_easy_002` |  Easy | Identical parallel machines | 10 jobs, 2 identical machines |
+| `schedule_medium_001` |  Medium | Job precedence constraints | 8 jobs with dependency graph |
+| `schedule_medium_002` |  Medium | Resource-constrained (2 types) | 6 jobs, 2 resource types, limited capacity |
+| `schedule_hard_001` |  Hard | Dynamic arrivals + rescheduling | 20 jobs arriving online, reoptimize continuously |
+| `schedule_hard_002` |  Hard | NP-hard: 3 machines + precedence + time windows | 15 jobs, 3 machines, complex constraints |
 
 ### Resource Allocation (5 Tasks)
 
 | Task ID | Difficulty | Description | Constraints |
 |---------|-----------|-------------|-------------|
-| `resource_easy_001` | 🟢 Easy | 5 resources, 5 consumers | Simple 1:1 matching |
-| `resource_medium_001` | 🟡 Medium | 20 resources, 50 consumers (2.5:1 ratio) | Contention, fairness |
-| `resource_medium_002` | 🟡 Medium | SLA requirements (95% uptime) | Service level agreements |
-| `resource_hard_001` | 🔴 Hard | 50 resources, 100 consumers, dynamic demands | Real-time load balancing |
-| `resource_hard_002` | 🔴 Hard | Multi-objective (efficiency + fairness + SLA) | Pareto frontier optimization |
+| `resource_easy_001` |  Easy | 5 resources, 5 consumers | Simple 1:1 matching |
+| `resource_medium_001` |  Medium | 20 resources, 50 consumers (2.5:1 ratio) | Contention, fairness |
+| `resource_medium_002` |  Medium | SLA requirements (95% uptime) | Service level agreements |
+| `resource_hard_001` |  Hard | 50 resources, 100 consumers, dynamic demands | Real-time load balancing |
+| `resource_hard_002` |  Hard | Multi-objective (efficiency + fairness + SLA) | Pareto frontier optimization |
 
 ---
 
@@ -374,13 +372,6 @@ Baseline performance using **Qwen2.5-72B-Instruct** via HuggingFace Inference AP
 | **Resource Allocation** | 0.73 | 0.59 | 0.42 | 0.58 |
 | **Overall** | **0.72** | **0.58** | **0.41** | **0.57** |
 
-### Difficulty Gradient Analysis
-
-```
-Difficulty Progression (Proves Genuine Challenge):
-  🟢 Easy   → avg: 0.72  ✅ Models handle well
-  🟡 Medium → avg: 0.58  ⚠️  Models show decline
-  🔴 Hard   → avg: 0.41  ❌ Frontier models significantly challenged
   
 Gradient slope: -0.31 per step (confirms difficulty scaling)
 Hard/Easy ratio: 0.57 (distinguishes true frontier tasks)
@@ -400,7 +391,6 @@ Hard/Easy ratio: 0.57 (distinguishes true frontier tasks)
 
 | Metric | Value |
 |--------|-------|
-| **Total Episodes** | 31/31 ✅ |
 | **Average Reward** | 0.57 |
 | **Runtime** | ~3 minutes (well under 20 min limit) |
 | **Hardware** | 2 vCPU, 8GB RAM (HF Spaces compatible) |
@@ -420,7 +410,7 @@ python inference.py  # Runs full benchmark, generates [START][STEP][END] logs
 
 ---
 
-## �🔬 Technical Specifications
+##  Technical Specifications
 
 ### Observation Space
 ```python
@@ -451,7 +441,7 @@ Where:
 
 ---
 
-## 🛠️ Technology Stack
+##  Technology Stack
 
 | Layer | Technology |
 |:---|:---|
@@ -472,7 +462,6 @@ Where:
 
 ```
 Component Performance:
-├─ Task Density:         +48% (21 → 31 tasks)
 ├─ Reward Quality:       +10% (limited → multi-objective)
 ├─ Scalability:          +31% (100 → ∞ sessions)
 ├─ Performance:          +36% (~12 min → 3 min)
@@ -495,7 +484,7 @@ All Metrics Production-Ready
 
 ---
 
-## 📦 Installation & Setup
+##  Installation & Setup
 
 ### Requirements
 - Python 3.10+
@@ -538,7 +527,7 @@ pytest tests_v2_enhanced.py -v --cov=warehouse_env
 
 ---
 
-## 📖 Documentation
+##  Documentation
 
 - **[API Reference](https://huggingface.co/spaces/mehajabeen/lunar/raw/file/swagger-ui.html)** - Complete endpoint documentation
 - **[Technical Deep-Dive](https://github.com/Mehajabeenshaik/Lunar/blob/main/LUNAR_V2_EFFICIENCY_UPGRADES.md)** - Architecture and design decisions
@@ -547,7 +536,7 @@ pytest tests_v2_enhanced.py -v --cov=warehouse_env
 
 ---
 
-## 🤝 Community & Support
+##  Community & Support
 
 | Channel | Link |
 |:---|:---|
@@ -557,7 +546,7 @@ pytest tests_v2_enhanced.py -v --cov=warehouse_env
 
 ---
 
-## 📝 Citation
+##  Citation
 
 If you use LUNAR in your research, please cite:
 
@@ -572,33 +561,24 @@ If you use LUNAR in your research, please cite:
 
 ---
 
-## 📄 License
+##  License
 
 LUNAR is released under the **MIT License**. See [LICENSE](LICENSE) for details.
 
 ---
 
-## 🎉 Key Achievements
 
-✅ **31 Production-Grade Tasks** across 5 real-world domains  
-✅ **9.70/10 Efficiency Score** with enterprise-grade reliability  
-✅ **95% Test Coverage** ensuring code quality and stability  
-✅ **4X Performance Gain** through optimization and caching  
-✅ **Unlimited Scalability** via SQLite persistence layer  
-✅ **100% OpenEnv Compliance** with full API specification  
-✅ **Live on HuggingFace Spaces** - Ready for production use  
-✅ **Comprehensive Documentation** with code examples and benchmarks  
 
 ---
 
 <p align="center">
-  <strong>🌙 LUNAR: Illuminating the Path to Intelligent Agent Training 🌙</strong>
+  <strong> LUNAR: Illuminating the Path to Intelligent Agent Training </strong>
   <br><br>
-  Built with ❤️ for the RL community
+  Built with  for the RL community
   <br><br>
-  <a href="https://github.com/Mehajabeenshaik/Lunar">⭐ Star on GitHub</a> • 
-  <a href="https://huggingface.co/spaces/mehajabeen/lunar">🚀 Try Live API</a> • 
-  <a href="https://github.com/Mehajabeenshaik/Lunar/issues">💬 Report Issues</a>
+  <a href="https://github.com/Mehajabeenshaik/Lunar"> Star on GitHub</a> • 
+  <a href="https://huggingface.co/spaces/mehajabeen/lunar"> Try Live API</a> • 
+  <a href="https://github.com/Mehajabeenshaik/Lunar/issues"> Report Issues</a>
 </p>
 
 </div>
