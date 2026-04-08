@@ -18,19 +18,19 @@ DEFAULT_ENDPOINTS = [
 ENDPOINTS = [e for e in DEFAULT_ENDPOINTS if e]
 
 TASK_NAME = os.getenv("WAREHOUSE_TASK", "warehouse_easy")
-MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("HF_TOKEN")
+MODEL_NAME = os.getenv("MODEL_NAME", "meta-llama/Llama-2-7b-chat-hf")
+HF_TOKEN = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_API_KEY")
 
-# Try to import OpenAI client (only if we have API key)
+# Try to import HuggingFace client
 client = None
 HAS_LLM = False
 
 try:
-    if OPENAI_API_KEY:  # Only try if we have a key
-        from openai import OpenAI
-        client = OpenAI(api_key=OPENAI_API_KEY)
+    if HF_TOKEN:  # Only try if we have a token
+        from huggingface_hub import InferenceClient
+        client = InferenceClient(model=MODEL_NAME, token=HF_TOKEN)
         HAS_LLM = True
-except Exception:  # Catch OpenAIError, ImportError, and any other exceptions
+except Exception:  # Catch any import or initialization errors
     client = None
     HAS_LLM = False
 
@@ -100,8 +100,8 @@ def step_environment(session_id: str, action: Dict) -> Dict[str, Any]:
 
 
 def generate_action(observation: Dict) -> Dict:
-    """Generate action using LLM or default strategy."""
-    if not HAS_LLM or not client or not OPENAI_API_KEY:
+    """Generate action using HuggingFace LLM or default strategy."""
+    if not HAS_LLM or not client or not HF_TOKEN:
         # Default strategy: order 50 units per warehouse
         num_warehouses = len(observation.get("warehouse_levels", [1]))
         return {
@@ -110,24 +110,27 @@ def generate_action(observation: Dict) -> Dict:
         }
     
     try:
-        # Prepare prompt
+        # Prepare prompt for LLM
         prompt = f"""Given warehouse state:
 - Levels: {observation.get('warehouse_levels', [])}
 - Demand: {observation.get('demand_forecast', [])}
 - Day: {observation.get('day', 0)}
 
-Generate action as JSON:
-{{"reorder_quantities": [...], "transfers": [[...]]}}"""
+Generate optimal action as JSON:
+{{"reorder_quantities": [...], "transfers": [[...]]}}
+
+Respond ONLY with valid JSON."""
         
-        response = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=100,
-            temperature=0.7
+        # Call HuggingFace Inference API
+        response = client.text_generation(
+            prompt,
+            max_new_tokens=150,
+            temperature=0.5,
+            top_p=0.9
         )
         
-        # Extract JSON
-        response_text = response.choices[0].message.content
+        # Extract JSON from response
+        response_text = response if isinstance(response, str) else str(response)
         start = response_text.find("{")
         end = response_text.rfind("}") + 1
         if start >= 0 and end > start:
@@ -141,7 +144,7 @@ Generate action as JSON:
     except Exception:
         pass
     
-    # Fallback
+    # Fallback to simple strategy
     num_warehouses = len(observation.get("warehouse_levels", [1]))
     return {
         "reorder_quantities": [50.0] * num_warehouses,
