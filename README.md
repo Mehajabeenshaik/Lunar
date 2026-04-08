@@ -50,7 +50,7 @@ pinned: true
 
 ##  Core Features
 
-###  31 Sophisticated Task Variants
+###   Sophisticated Task Variants
 ```
 Warehouse Management    → 10 tasks  (inventory optimization, demand variability, network effects)
 Supply Chain Logistics  → 7 tasks   (multi-tier networks, disruption resilience, cost optimization)
