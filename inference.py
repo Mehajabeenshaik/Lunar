@@ -7,9 +7,15 @@ import json
 import requests
 from typing import Dict, Any, Optional
 
-# Configuration - Try multiple endpoints
+# Configuration variables
+TASK_NAME = os.getenv("WAREHOUSE_TASK", "warehouse_easy")
+API_BASE_URL = os.getenv("API_BASE_URL", "").strip()
+MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # No default - optional
+
+# Try multiple endpoints
 DEFAULT_ENDPOINTS = [
-    os.getenv("API_BASE_URL", "").strip() or None,  # Environment override
+    API_BASE_URL or None,  # Environment override
     "https://mehajabeen-lunar.hf.space",  # HF Spaces production
     "http://localhost:7860",  # Local development
 ]
@@ -17,20 +23,17 @@ DEFAULT_ENDPOINTS = [
 # Remove None values
 ENDPOINTS = [e for e in DEFAULT_ENDPOINTS if e]
 
-TASK_NAME = os.getenv("WAREHOUSE_TASK", "warehouse_easy")
-MODEL_NAME = os.getenv("MODEL_NAME", "meta-llama/Llama-2-7b-chat-hf")
-HF_TOKEN = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_API_KEY")
-
-# Try to import HuggingFace client
+# Try to import OpenAI client
 client = None
 HAS_LLM = False
 
 try:
-    if HF_TOKEN:  # Only try if we have a token
-        from huggingface_hub import InferenceClient
-        client = InferenceClient(model=MODEL_NAME, token=HF_TOKEN)
+    from openai import OpenAI
+    # Only initialize client if API key is provided
+    if OPENAI_API_KEY:
+        client = OpenAI(api_key=OPENAI_API_KEY)
         HAS_LLM = True
-except Exception:  # Catch any import or initialization errors
+except Exception:
     client = None
     HAS_LLM = False
 
@@ -100,8 +103,8 @@ def step_environment(session_id: str, action: Dict) -> Dict[str, Any]:
 
 
 def generate_action(observation: Dict) -> Dict:
-    """Generate action using HuggingFace LLM or default strategy."""
-    if not HAS_LLM or not client or not HF_TOKEN:
+    """Generate action using OpenAI LLM or default strategy."""
+    if not HAS_LLM or not client or not OPENAI_API_KEY:
         # Default strategy: order 50 units per warehouse
         num_warehouses = len(observation.get("warehouse_levels", [1]))
         return {
@@ -110,7 +113,7 @@ def generate_action(observation: Dict) -> Dict:
         }
     
     try:
-        # Prepare prompt for LLM
+        # Prepare prompt for OpenAI
         prompt = f"""Given warehouse state:
 - Levels: {observation.get('warehouse_levels', [])}
 - Demand: {observation.get('demand_forecast', [])}
@@ -121,16 +124,16 @@ Generate optimal action as JSON:
 
 Respond ONLY with valid JSON."""
         
-        # Call HuggingFace Inference API
-        response = client.text_generation(
-            prompt,
-            max_new_tokens=150,
-            temperature=0.5,
-            top_p=0.9
+        # Call OpenAI API
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7,
+            max_tokens=150
         )
         
         # Extract JSON from response
-        response_text = response if isinstance(response, str) else str(response)
+        response_text = response.choices[0].message.content if response.choices else ""
         start = response_text.find("{")
         end = response_text.rfind("}") + 1
         if start >= 0 and end > start:
