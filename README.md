@@ -8,7 +8,7 @@ pinned: true
 
 <div align="center">
 
-# 🚀 LUNAR: Multi-Domain Reinforcement Learning Platform
+# 🌙 LUNAR: Enterprise-Grade Multi-Domain RL Platform
 
 <p>
   <strong>Production-Ready RL Environment for Real-World Optimization</strong>
