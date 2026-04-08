@@ -4,7 +4,7 @@ import os
 import asyncio
 from typing import Optional, Any, Dict, List
 from fastapi import FastAPI, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 import uvicorn
 
 from .env import WarehouseEnv
@@ -31,6 +31,14 @@ class ResetRequest(BaseModel):
         description="Task ID (e.g., warehouse_easy, warehouse_medium, supply_chain_basic, forecast_stationary, production_simple, resource_basic). Defaults to warehouse_easy if not provided.",
         examples=["warehouse_easy", "warehouse_medium", "supply_chain_basic"]
     )
+    
+    @field_validator('task', mode='before')
+    @classmethod
+    def validate_task(cls, v):
+        """Convert Swagger placeholder 'string' to default task."""
+        if v is None or v == "string" or v == "":
+            return "warehouse_easy"
+        return v
 
 
 class ResetResponse(BaseModel):
@@ -104,18 +112,12 @@ class RenderResponse(BaseModel):
 async def reset(req: Optional[ResetRequest] = None, session_id: str = Query(None)):
     """Reset environment to initial state (create new session if needed)."""
     
-    # Determine task - handle Swagger placeholder "string" and None values
-    default_task = os.getenv("WAREHOUSE_TASK", "warehouse_easy")
-    task = None
+    # Create default request if none provided
+    if not req:
+        req = ResetRequest(task="warehouse_easy")
     
-    if req and req.task and req.task != "string":
-        task = req.task
-    else:
-        task = default_task
-    
-    # Validate task
-    if not is_valid_task(task):
-        raise HTTPException(status_code=400, detail=f"Unknown task: {task}. Valid tasks: {list(get_task_variants().keys())}")
+    # Task is already validated and cleaned by Pydantic
+    task = req.task
     
     # Create or reuse session
     if not session_id:
