@@ -28,19 +28,11 @@ manager = SessionManager(max_sessions=100, session_timeout_hours=2)
 
 
 class ResetRequest(BaseModel):
+    """Optional reset request - all fields are optional with defaults."""
     task: Optional[str] = Field(
-        "warehouse_easy",
-        description="Task ID (e.g., warehouse_easy, warehouse_medium, supply_chain_basic, forecast_stationary, production_simple, resource_basic). Defaults to warehouse_easy if not provided.",
-        examples=["warehouse_easy", "warehouse_medium", "supply_chain_basic"]
+        default="warehouse_easy",
+        description="Task ID (warehouse_easy, warehouse_medium, supply_chain_basic, etc). Defaults to warehouse_easy."
     )
-    
-    @field_validator('task', mode='before')
-    @classmethod
-    def validate_task(cls, v):
-        """Convert Swagger placeholder 'string' to default task."""
-        if v is None or v == "string" or v == "":
-            return "warehouse_easy"
-        return v
 
 
 class ResetResponse(BaseModel):
@@ -111,19 +103,23 @@ class RenderResponse(BaseModel):
 
 
 @app.post("/reset", response_model=ResetResponse)
-async def reset(req: Optional[ResetRequest] = Body(None), session_id: str = Query(None)):
-    """Reset environment to initial state (create new session if needed)."""
+async def reset(
+    task: str = Query("warehouse_easy", description="Task ID (warehouse_easy, warehouse_medium, supply_chain_basic, etc)"),
+    session_id: str = Query(None, description="Optional session ID to reuse")
+):
+    """Reset environment to initial state (create new session if needed).
+    
+    Args:
+        task: Task ID to run (defaults to warehouse_easy)
+        session_id: Optional session ID to reuse
+    """
     try:
-        # Create default request if none provided
-        if not req:
-            req = ResetRequest(task="warehouse_easy")
-        
-        # Task is already validated and cleaned by Pydantic
-        task = req.task
-        
-        # Validate task exists
+        # Validate task
         if not is_valid_task(task):
-            raise HTTPException(status_code=400, detail=f"Unknown task: {task}. Valid tasks: {list(get_task_variants().keys())}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown task: {task}. Valid tasks: {list(get_task_variants().keys())}"
+            )
         
         # Create or reuse session
         if not session_id:
@@ -140,7 +136,6 @@ async def reset(req: Optional[ResetRequest] = Body(None), session_id: str = Quer
     except HTTPException:
         raise
     except Exception as e:
-        # Log the full error for debugging
         error_detail = f"Reset failed: {str(e)}\n{traceback.format_exc()}"
         print(error_detail, file=sys.stderr)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
