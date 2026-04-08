@@ -1,19 +1,27 @@
 #!/usr/bin/env python
-"""Simple baseline inference for LUNAR RL environment."""
+"""Bulletproof baseline inference for LUNAR RL environment."""
 
 import os
 import sys
 import json
 import requests
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
-# Configuration
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:7860")
+# Configuration - Try multiple endpoints
+DEFAULT_ENDPOINTS = [
+    os.getenv("API_BASE_URL", "").strip() or None,  # Environment override
+    "https://mehajabeen-lunar.hf.space",  # HF Spaces production
+    "http://localhost:7860",  # Local development
+]
+
+# Remove None values
+ENDPOINTS = [e for e in DEFAULT_ENDPOINTS if e]
+
 TASK_NAME = os.getenv("WAREHOUSE_TASK", "warehouse_easy")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("HF_TOKEN")
 
-# Try to import OpenAI client for reasoning
+# Try to import OpenAI client
 try:
     from openai import OpenAI
     client = OpenAI(api_key=OPENAI_API_KEY)
@@ -22,40 +30,74 @@ except ImportError:
     client = None
     HAS_LLM = False
 
+# Track which endpoint works
+WORKING_ENDPOINT = None
 
-def reset_environment() -> Dict[str, Any]:
+
+def reset_environment() -> Optional[Dict[str, Any]]:
     """Reset environment and get initial observation."""
-    try:
-        response = requests.post(
-            f"{API_BASE_URL}/reset",
-            json={"task": TASK_NAME},
-            timeout=10
-        )
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        print(f"Error resetting environment: {e}", file=sys.stderr)
-        sys.exit(1)
+    global WORKING_ENDPOINT
+    
+    for endpoint in ENDPOINTS:
+        try:
+            url = f"{endpoint.rstrip('/')}/reset"
+            response = requests.post(
+                url,
+                json={"task": TASK_NAME},
+                timeout=5
+            )
+            response.raise_for_status()
+            WORKING_ENDPOINT = endpoint
+            return response.json()
+        except Exception:
+            continue
+    
+    # If we reach here, try with /api prefix
+    for endpoint in ENDPOINTS:
+        try:
+            url = f"{endpoint.rstrip('/')}/api/reset"
+            response = requests.post(
+                url,
+                json={"task": TASK_NAME},
+                timeout=5
+            )
+            response.raise_for_status()
+            WORKING_ENDPOINT = endpoint
+            return response.json()
+        except Exception:
+            continue
+    
+    return None
 
 
 def step_environment(session_id: str, action: Dict) -> Dict[str, Any]:
     """Execute one step in environment."""
-    try:
-        response = requests.post(
-            f"{API_BASE_URL}/step",
-            json={"session_id": session_id, "action": action},
-            timeout=10
-        )
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        print(f"Error stepping environment: {e}", file=sys.stderr)
-        return {"error": str(e), "reward": 0.1, "done": True}
+    if not WORKING_ENDPOINT:
+        return {"error": "No working endpoint", "reward": 0.1, "done": True}
+    
+    endpoints_to_try = [
+        f"{WORKING_ENDPOINT.rstrip('/')}/step",
+        f"{WORKING_ENDPOINT.rstrip('/')}/api/step",
+    ]
+    
+    for url in endpoints_to_try:
+        try:
+            response = requests.post(
+                url,
+                json={"session_id": session_id, "action": action},
+                timeout=5
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception:
+            continue
+    
+    return {"error": "Step failed", "reward": 0.1, "done": True}
 
 
 def generate_action(observation: Dict) -> Dict:
     """Generate action using LLM or default strategy."""
-    if not HAS_LLM or not client:
+    if not HAS_LLM or not client or not OPENAI_API_KEY:
         # Default strategy: order 50 units per warehouse
         num_warehouses = len(observation.get("warehouse_levels", [1]))
         return {
@@ -65,16 +107,14 @@ def generate_action(observation: Dict) -> Dict:
     
     try:
         # Prepare prompt
-        prompt = f"""
-Given warehouse state:
+        prompt = f"""Given warehouse state:
 - Levels: {observation.get('warehouse_levels', [])}
-- Demand Forecast: {observation.get('demand_forecast', [])}
-- Supplier Status: {observation.get('supplier_status', [])}
+- Demand: {observation.get('demand_forecast', [])}
 - Day: {observation.get('day', 0)}
 
-Generate action as JSON only:
-{{"reorder_quantities": [...], "transfers": [[...]]}}
-"""
+Generate action as JSON:
+{{"reorder_quantities": [...], "transfers": [[...]]}}"""
+        
         response = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[{"role": "user", "content": prompt}],
@@ -87,8 +127,14 @@ Generate action as JSON only:
         start = response_text.find("{")
         end = response_text.rfind("}") + 1
         if start >= 0 and end > start:
-            return json.loads(response_text[start:end])
-    except Exception as e:
+            action = json.loads(response_text[start:end])
+            # Validate structure
+            num_warehouses = len(observation.get("warehouse_levels", [1]))
+            if "reorder_quantities" in action and "transfers" in action:
+                if (len(action["reorder_quantities"]) == num_warehouses and
+                    len(action["transfers"]) == num_warehouses):
+                    return action
+    except Exception:
         pass
     
     # Fallback
@@ -105,12 +151,16 @@ def main():
     
     # Reset
     reset_result = reset_environment()
-    if "error" in reset_result:
-        print(f"[END] error={reset_result['error']}")
+    if not reset_result or "error" in reset_result:
+        print(f"[END] error=reset_failed steps=0 score=0.0 rewards=")
         sys.exit(1)
     
     session_id = reset_result.get("session_id")
     observation = reset_result.get("observation", {})
+    
+    if not session_id:
+        print(f"[END] error=no_session_id steps=0 score=0.0 rewards=")
+        sys.exit(1)
     
     episode_rewards = []
     step_count = 0
