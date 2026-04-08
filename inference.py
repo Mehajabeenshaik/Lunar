@@ -21,12 +21,16 @@ TASK_NAME = os.getenv("WAREHOUSE_TASK", "warehouse_easy")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("HF_TOKEN")
 
-# Try to import OpenAI client
+# Try to import OpenAI client (only if we have API key)
+client = None
+HAS_LLM = False
+
 try:
-    from openai import OpenAI
-    client = OpenAI(api_key=OPENAI_API_KEY)
-    HAS_LLM = OPENAI_API_KEY is not None
-except ImportError:
+    if OPENAI_API_KEY:  # Only try if we have a key
+        from openai import OpenAI
+        client = OpenAI(api_key=OPENAI_API_KEY)
+        HAS_LLM = True
+except Exception:  # Catch OpenAIError, ImportError, and any other exceptions
     client = None
     HAS_LLM = False
 
