@@ -58,7 +58,7 @@ class TestTaskExpansion:
 
 
 class TestEnhancedRewardScale:
-    """Test 0.1-1.0 never-binary reward system (APEX-style)."""
+    """Test 0.1-1.0 never-binary reward system."""
     
     def test_reward_range(self):
         """Verify rewards never go below 0.1 (no binary zero)."""
