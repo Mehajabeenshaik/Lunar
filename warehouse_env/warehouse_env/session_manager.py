@@ -103,7 +103,7 @@ class SessionManager:
             print(f"Warning: Could not load session from DB: {e}")
         return None
     
-
+    def _cleanup_old_sessions(self):
         """Remove sessions older than timeout to prevent memory leaks."""
         now = datetime.now()
         expired = []
