@@ -8,7 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 # Import app from the actual server location
-from warehouse_env.warehouse_env.server import app
+from warehouse_env.warehouse_env.server_multi_domain import app
 
 if __name__ == "__main__":
     import uvicorn
