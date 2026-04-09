@@ -240,6 +240,22 @@ async def state(session_id: str = Query(...)):
     )
 
 
+@app.get("/state/{session_id}", response_model=StateResponse)
+async def state_by_id(session_id: str):
+    """Get current environment state by session ID (path parameter version)."""
+    
+    try:
+        env = manager.get_session(session_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
+    
+    return StateResponse(
+        state=env.state_dict(),
+        task=env.task,
+        episode_rewards=env.episode_rewards,
+    )
+
+
 @app.get("/render")
 async def render(session_id: str = Query(None)) -> RenderResponse:
     """Render environment visualization."""
