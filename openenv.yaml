@@ -1,42 +1,105 @@
-name: "Lunar Comprehensive Benchmark"
+name: lunar-comprehensive-benchmark
 spec_version: 1
 version: "2.0"
-description: "Lunar: 31-task comprehensive benchmark across 5 domains - Warehouse, Data Pipeline, Code Review, Resource Allocation, System Optimization"
+description: >
+  Lunar: Advanced 32-task comprehensive benchmark across 5 domains.
+  Tests AI agents on warehouse optimization, data pipelines, code review,
+  resource allocation, and system optimization with deterministic graders.
+
+  Domains:
+  - warehouse: 6 tasks (inventory management, multi-warehouse optimization)
+  - data_pipeline: 8 tasks (ingestion, cleaning, validation, transformation, export)
+  - code_review: 8 tasks (style, performance, security, maintainability, testing)
+  - resource_allocation: 5 tasks (budgeting, scheduling, capacity planning)
+  - system_optimization: 5 tasks (query, memory, throughput, latency optimization)
 
 type: rl-environment
 runtime: docker
 app: app.py
 port: 7860
-tagline: "Advanced multi-domain RL benchmark with 31 tasks, 5 specializations, and deterministic evaluation"
+tagline: "32-task multi-domain RL benchmark with deterministic grading"
 
-features:
-  multi_domain: true
-  task_count: 31
-  domain_count: 5
-  session_management: true
-  leaderboard: true
-  multi_agent: false
-  difficulty_progression: true
-  deterministic_graders: true
-  partial_credit: true
-  episode_based_scoring: true
-  adaptive_difficulty: true
+benchmarks:
+  - name: warehouse
+    description: "Inventory management and warehouse optimization across multiple locations"
+    tasks: 6
+    difficulties: [novice, easy, medium, intermediate, hard, extreme]
+  - name: data_pipeline
+    description: "Data ingestion, cleaning, validation, transformation, and export operations"
+    tasks: 8
+    difficulties: [easy, intermediate, hard]
+  - name: code_review
+    description: "Code style, performance, security, maintainability, testing, and integration"
+    tasks: 8
+    difficulties: [easy, intermediate, hard]
+  - name: resource_allocation
+    description: "Resource budgeting, scheduling, team allocation, and capacity planning"
+    tasks: 5
+    difficulties: [easy, medium, hard]
+  - name: system_optimization
+    description: "Query optimization, memory usage, throughput, and latency improvements"
+    tasks: 5
+    difficulties: [easy, intermediate, hard]
 
-domains:
-  - warehouse
-  - data_pipeline
-  - code_review
-  - resource_allocation
-  - system_optimization
+total_tasks: 32
 
-graders:
-  - warehouse_grader
-  - data_pipeline_grader
-  - code_review_grader
-  - resource_allocation_grader
-  - system_optimization_grader
+use_cases:
+  - Benchmark multi-domain AI reasoning on real-world optimization problems
+  - Train RL agents as domain-expert optimization assistants
+  - Evaluate iterative problem-solving and multi-step planning
+  - Research deterministic reward functions for complex systems
+  - Evaluate code quality and system performance optimization capabilities
+name: "lunar-comprehensive-benchmark"
+spec_version: 1
+version: "2.0"
+description: >
+  Lunar: Advanced 32-task comprehensive benchmark across 5 domains.
+  Tests AI agents on warehouse optimization, data pipelines, code review,
+  resource allocation, and system optimization with deterministic graders.
+  
+  Domains:
+  - warehouse: 6 tasks
+  - data_pipeline: 8 tasks  
+  - code_review: 8 tasks
+  - resource_allocation: 5 tasks
+  - system_optimization: 5 tasks
 
-tasks:
+type: rl-environment
+runtime: docker
+app: app.py
+port: 7860
+tagline: "Multi-domain RL benchmark with 32 tasks and deterministic grading"
+
+benchmarks:
+  - name: warehouse
+    description: "Inventory management and warehouse optimization"
+    tasks: 6
+    difficulties: [novice, easy, medium, intermediate, hard, extreme]
+  - name: data_pipeline
+    description: "Data ingestion, cleaning, validation, transformation, and export"
+    tasks: 8
+    difficulties: [easy, intermediate, hard]
+  - name: code_review
+    description: "Code style, performance, security, maintainability, testing, and integration"
+    tasks: 8
+    difficulties: [easy, intermediate, hard]
+  - name: resource_allocation
+    description: "Budget management, scheduling, and capacity planning"
+    tasks: 5
+    difficulties: [easy, medium, hard]
+  - name: system_optimization
+    description: "Query optimization, memory usage, throughput, and latency"
+    tasks: 5
+    difficulties: [easy, intermediate, hard]
+
+total_tasks: 32
+
+use_cases:
+  - Benchmark multi-domain AI reasoning on real-world optimization problems
+  - Train RL agents as domain-expert optimization assistants
+  - Evaluate iterative problem-solving and multi-step planning
+  - Research deterministic reward functions for complex systems
+  - Benchmark code quality and system performance optimization capabilities
   # ===== WAREHOUSE (5 tasks) =====
   - id: warehouse_novice
     name: "Warehouse Novice"
