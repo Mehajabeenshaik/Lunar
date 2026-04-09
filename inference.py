@@ -1,238 +1,210 @@
-#!/usr/bin/env python
-"""LUNAR OpenEnv Baseline Inference - Multi-domain (32 tasks) with LLM proxy support."""
+#!/usr/bin/env python3
+"""
+LUNAR OpenEnv Hackathon - Inference Script
+Runs LLM agent against the local LUNAR environment
+"""
 
 import os
 import sys
 import json
+import traceback
 import requests
-from typing import Dict, Any, Optional
+from openai import OpenAI
 
 # ============================================================
 # ENV VARS - NO FALLBACK DEFAULTS (validator injects these)
 # ============================================================
-# For Phase 2: validator provides API_BASE_URL pointing to LLM proxy
-API_BASE_URL = os.getenv("API_BASE_URL", "")  # Empty if not provided
-API_KEY = os.getenv("API_KEY") or os.getenv("OPENAI_API_KEY")  # Accept both
+API_BASE_URL = os.environ["API_BASE_URL"]
+API_KEY = os.environ["API_KEY"]
+MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 
-# Support multiple task/environment variable names
-TASK_NAME = os.getenv("WAREHOUSE_TASK") or os.getenv("TASK_NAME") or os.getenv("TASK") or "warehouse_novice"
-MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
+# Local environment server
+LOCAL_ENV_URL = os.environ.get("ENV_URL", "https://mehajabeen-lunar.hf.space")
 
-# Try multiple endpoints for environment
-DEFAULT_ENDPOINTS = [
-    "https://mehajabeen-lunar.hf.space",  # HF Spaces production
-    "http://localhost:7860",  # Local development
+# ============================================================
+# LOGGING FUNCTIONS - exact format required by judges
+# ============================================================
+
+def log_start(task, env, model):
+    """Log task start."""
+    print(f"[START] task={task} env={env} model={model}", flush=True)
+
+def log_step(step, action, reward, done, error):
+    """Log step result."""
+    action_str = str(action)[:100].replace('\n', ' ')
+    error_str = f"{error}" if error else "null"
+    print(f"[STEP] step={step} action={action_str!r} reward={reward:.2f} done={done} error={error_str}", flush=True)
+
+def log_end(success, steps, score, rewards):
+    """Log episode end."""
+    rewards_str = ",".join([f"{r:.2f}" for r in rewards])
+    print(f"[END] success={success} steps={steps} score={score:.2f} rewards={rewards_str}", flush=True)
+
+# ============================================================
+# OPENAI CLIENT
+# ============================================================
+
+client = OpenAI(
+    base_url=API_BASE_URL,
+    api_key=API_KEY,
+)
+
+SYSTEM_PROMPT = """You are an expert agent solving operational problems.
+Your task is to analyze the problem and generate an appropriate action.
+Return ONLY valid JSON action object, no explanations."""
+
+TASKS = [
+    "warehouse_novice",
+    "warehouse_easy",
+    "warehouse_medium",
 ]
 
-# ============================================================
-# OPENAI CLIENT - Routes through LLM proxy if API_BASE_URL set
-# ============================================================
-client = None
-HAS_LLM = False
-
-try:
-    from openai import OpenAI
-    # Initialize OpenAI client - if API_BASE_URL is set, requests go through proxy!
-    if API_BASE_URL and API_KEY:
-        client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
-        HAS_LLM = True
-    elif API_KEY:
-        # Fallback to direct OpenAI if only API_KEY provided (no proxy)
-        client = OpenAI(api_key=API_KEY)
-        HAS_LLM = True
-except Exception:
-    client = None
-    HAS_LLM = False
-
-# Track which endpoint works
-WORKING_ENDPOINT = None
-ENDPOINTS = [e for e in DEFAULT_ENDPOINTS if e]
+MAX_STEPS = 8
+SUCCESS_THRESHOLD = 0.5
 
 
-def reset_environment() -> Optional[Dict[str, Any]]:
-    """Reset environment and get initial observation."""
-    global WORKING_ENDPOINT
+def get_agent_action(problem_desc, feedback="", step=1):
+    """Get LLM response for current problem."""
+    user_msg = f"""Problem: {problem_desc}"""
+    if feedback:
+        user_msg += f"\n\nPrevious feedback: {feedback}\nImprove your solution."
     
-    for endpoint in ENDPOINTS:
-        try:
-            url = f"{endpoint.rstrip('/')}/reset"
-            response = requests.post(
-                url,
-                json={"task": TASK_NAME},
-                timeout=5
-            )
-            response.raise_for_status()
-            WORKING_ENDPOINT = endpoint
-            return response.json()
-        except Exception:
-            continue
-    
-    # If we reach here, try with /api prefix
-    for endpoint in ENDPOINTS:
-        try:
-            url = f"{endpoint.rstrip('/')}/api/reset"
-            response = requests.post(
-                url,
-                json={"task": TASK_NAME},
-                timeout=5
-            )
-            response.raise_for_status()
-            WORKING_ENDPOINT = endpoint
-            return response.json()
-        except Exception:
-            continue
-    
-    return None
+    user_msg += "\n\nAnalyze the problem and respond with a JSON action object. Return ONLY the JSON."
 
+    response = client.chat.completions.create(
+        model=MODEL_NAME,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_msg}
+        ],
+        max_tokens=1000,
+        temperature=0.3,
+    )
+    return response.choices[0].message.content.strip()
 
-def step_environment(session_id: str, action: Dict) -> Dict[str, Any]:
-    """Execute one step in environment."""
-    if not WORKING_ENDPOINT:
-        return {"error": "No working endpoint", "reward": 0.1, "done": True}
+def run_task(task_name):
+    """Run one task against the local LUNAR environment."""
+    env_name = "lunar"
     
-    endpoints_to_try = [
-        f"{WORKING_ENDPOINT.rstrip('/')}/step",
-        f"{WORKING_ENDPOINT.rstrip('/')}/api/step",
-    ]
+    log_start(task=task_name, env=env_name, model=MODEL_NAME)
     
-    for url in endpoints_to_try:
-        try:
-            response = requests.post(
-                url,
-                json={"session_id": session_id, "action": action},
-                timeout=5
-            )
-            response.raise_for_status()
-            return response.json()
-        except Exception:
-            continue
-    
-    return {"error": "Step failed", "reward": 0.1, "done": True}
-
-
-def generate_action(task_id: str, observation: Dict) -> Dict:
-    """Generate action using LLM (via proxy if configured) or default strategy."""
-    
-    # Determine domain from task_id
-    domain = task_id.split("_")[0] if "_" in task_id else "warehouse"
-    
-    # Default actions by domain
-    if domain == "warehouse":
-        num_warehouses = observation.get("num_warehouses", 1)
-        default_action = {
-            "reorder_quantities": [50.0] * num_warehouses,
-            "transfers": [[0.0] * num_warehouses for _ in range(num_warehouses)]
-        }
-    elif domain == "data":
-        default_action = {"source_id": 0, "batch_size": 100}
-    elif domain == "code":
-        default_action = {"file_id": 0, "fix_type": "style"}
-    elif domain == "resource":
-        default_action = {"resource_id": 0, "allocation": 50}
-    elif domain == "optimization":
-        default_action = {"query_id": 0, "optimization_type": "index"}
-    else:
-        default_action = {"action": "default"}
-    
-    if not HAS_LLM or not client:
-        return default_action
+    rewards = []
+    feedback = ""
+    steps_taken = 0
+    success = False
+    error_occurred = False
     
     try:
-        # Prepare prompt
-        prompt = f"""Task: {task_id}
-Observation: {json.dumps(observation)[:200]}...
-
-Generate action as JSON for this domain.
-Respond ONLY with valid JSON."""
+        # Reset the environment
+        try:
+            reset_resp = requests.post(
+                f"{LOCAL_ENV_URL}/reset",
+                json={"task": task_name},
+                timeout=30
+            )
+            reset_resp.raise_for_status()
+            reset_data = reset_resp.json()
+        except Exception as e:
+            log_step(step=1, action="reset_failed", reward=0.0, done=True, error=str(e))
+            log_end(success=False, steps=0, score=0.0, rewards=[])
+            return 0.0
         
-        # Call client - if base_url is set, request goes through LLM proxy!
-        response = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
-            max_tokens=150
-        )
+        session_id = reset_data.get("session_id")
+        problem_state = reset_data.get("state", {})
+        problem_desc = json.dumps(problem_state)[:200]  # Use state as problem description
         
-        # Extract JSON from response
-        response_text = response.choices[0].message.content if response.choices else ""
-        start = response_text.find("{")
-        end = response_text.rfind("}") + 1
-        if start >= 0 and end > start:
-            action = json.loads(response_text[start:end])
-            if action:  # Any valid JSON action
-                return action
-    except Exception:
-        pass
+        # Run the task loop
+        for step in range(1, MAX_STEPS + 1):
+            try:
+                # Get agent action
+                action = get_agent_action(problem_desc, feedback, step)
+                
+                # Submit step to environment
+                try:
+                    step_resp = requests.post(
+                        f"{LOCAL_ENV_URL}/step",
+                        json={
+                            "session_id": session_id,
+                            "action": {"code": action}
+                        },
+                        timeout=30
+                    )
+                    step_resp.raise_for_status()
+                    result = step_resp.json()
+                except Exception as e:
+                    log_step(step=step, action=action, reward=0.0, done=True, error=str(e))
+                    error_occurred = True
+                    break
+                
+                reward = float(result.get("reward", 0.0))
+                terminated = bool(result.get("done", False))  # Accept "done" from our server
+                feedback = result.get("feedback", "")
+                
+                rewards.append(reward)
+                steps_taken = step
+                
+                log_step(step=step, action=action, reward=reward, done=terminated, error=None)
+                
+                if terminated:
+                    break
+                
+                # Update problem state for next step if available
+                if result.get("state"):
+                    problem_state = result["state"]
+                    problem_desc = json.dumps(problem_state)[:200]
+            
+            except Exception as e:
+                log_step(step=step, action="error", reward=0.0, done=True, error=str(e))
+                error_occurred = True
+                break
+        
+        # Calculate score using MAX reward (like APEX)
+        score = max(rewards) if rewards else 0.0
+        success = score >= SUCCESS_THRESHOLD
     
-    return default_action
-
+    except Exception as e:
+        # Outer exception handler
+        error_occurred = True
+        log_step(step=1, action="error", reward=0.0, done=True, error=str(e))
+    
+    finally:
+        # Always log end, even if an exception occurred
+        score = max(rewards) if rewards else 0.0
+        log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
+        print(flush=True)
+    
+    return score
 
 def main():
-    """Run baseline inference with proper logging for Phase 2."""
-    print(f"[START] task={TASK_NAME} model={MODEL_NAME}")
-    
-    # Reset
-    reset_result = reset_environment()
-    if not reset_result or "error" in reset_result:
-        print(f"[END] error=reset_failed steps=0 score=0.0 rewards= success=false")
-        sys.exit(0)  # Exit 0 - validator checks if script ran
-    
-    session_id = reset_result.get("session_id")
-    # Support both "state" and "observation" keys
-    observation = reset_result.get("state") or reset_result.get("observation", {})
-    
-    if not session_id:
-        print(f"[END] error=no_session_id steps=0 score=0.0 rewards= success=false")
-        sys.exit(0)
-    
-    episode_rewards = []
-    step_count = 0
-    max_steps = 8
-    
-    while step_count < max_steps:
-        step_count += 1
+    """Run the benchmark."""
+    try:
+        print("=" * 80, flush=True)
+        print("LUNAR COMPREHENSIVE OPENENVIRONMENT BENCHMARK", flush=True)
+        print(f"Model: {MODEL_NAME}", flush=True)
+        print(f"API Base URL: {API_BASE_URL}", flush=True)
+        print(f"Local Env URL: {LOCAL_ENV_URL}", flush=True)
+        print("=" * 80, flush=True)
+        print(flush=True)
         
-        # Generate action
-        action = generate_action(TASK_NAME, observation)
+        all_scores = []
         
-        # Step
-        step_result = step_environment(session_id, action)
+        for task in TASKS:
+            score = run_task(task)
+            all_scores.append(score)
         
-        reward_value = step_result.get("reward", 0.1)
-        episode_rewards.append(reward_value)
-        done = step_result.get("done", False)
+        avg = sum(all_scores) / len(all_scores) if all_scores else 0.0
         
-        # Log step - format: [STEP] step=N action=... reward=X.XX done=true/false error=...
-        action_str = json.dumps(action)[:50]  # Truncate for readability
-        error_msg = step_result.get("error", "")
-        error_field = f"error={error_msg}" if error_msg else "error=null"
+        print("=" * 80, flush=True)
+        print("BENCHMARK SUMMARY", flush=True)
+        print("=" * 80, flush=True)
+        print(f"Tasks completed: {len(all_scores)}/{len(TASKS)}", flush=True)
+        print(f"Average score: {avg:.2f}", flush=True)
+        print("=" * 80, flush=True)
         
-        print(
-            f"[STEP] step={step_count} action={action_str} reward={reward_value:.2f} "
-            f"done={str(done).lower()} {error_field}"
-        )
-        
-        if done:
-            break
-        
-        # Get next observation - support both "state" and "observation"
-        observation = step_result.get("state") or step_result.get("observation", observation)
-    
-    # Calculate score
-    avg_reward = sum(episode_rewards) / len(episode_rewards) if episode_rewards else 0.0
-    score = avg_reward
-    success = score > 0.3  # Lower threshold for diverse tasks
-    
-    # Log end - format: [END] success=true/false steps=N score=X.XX rewards=X.XX,X.XX,...
-    rewards_str = ",".join(f"{r:.2f}" for r in episode_rewards)
-    
-    print(
-        f"[END] success={str(success).lower()} steps={step_count} score={score:.2f} "
-        f"rewards={rewards_str}"
-    )
-    
-    sys.exit(0)  # Always exit 0 - Phase 2 checks if script ran, not if score is high
-
+    except Exception as e:
+        print(f"[ERROR] Benchmark failed: {e}", flush=True)
+        traceback.print_exc()
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
