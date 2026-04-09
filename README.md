@@ -102,7 +102,7 @@ Never-Binary Scale: 0.1-1.0 (no demotivating zeros!)
 ### Option 1: Live API (No Installation)
 ```bash
 # Test the API immediately on HuggingFace Spaces
-curl -X POST https://mehajabeen-lunar.hf.space/api/reset \
+curl -X POST https://mehajabeen-lunar.hf.space/reset \
   -H "Content-Type: application/json" \
   -d '{"task": "warehouse_easy"}'
 
@@ -170,7 +170,7 @@ docker run --gpus all -p 7860:7860 lunar-env
 
 ### Reset Environment (Start Session)
 ```bash
-curl -X POST https://mehajabeen-lunar.hf.space/api/reset \
+curl -X POST https://mehajabeen-lunar.hf.space/reset \
   -H "Content-Type: application/json" \
   -d '{
     "task": "warehouse_easy"
@@ -195,7 +195,7 @@ curl -X POST https://mehajabeen-lunar.hf.space/api/reset \
 
 ### Execute Action (Step)
 ```bash
-curl -X POST "https://mehajabeen-lunar.hf.space/api/step?session_id=f47ac10b-58cc-4372-a567-0e02b2c3d479" \
+curl -X POST "https://mehajabeen-lunar.hf.space/step?session_id=f47ac10b-58cc-4372-a567-0e02b2c3d479" \
   -H "Content-Type: application/json" \
   -d '{
     "action": {
