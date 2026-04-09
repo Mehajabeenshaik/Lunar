@@ -13,7 +13,8 @@ print(f"[DEBUG] Python path: {sys.path[:2]}")
 
 try:
     print("[DEBUG] Importing FastAPI app from server_multi_domain...")
-    from warehouse_env.warehouse_env.server_multi_domain import app
+    from warehouse_env.warehouse_env.server_multi_domain import app as fastapi_app
+    app = fastapi_app  # Export as module-level variable for uvicorn
     print("[DEBUG] App imported successfully!")
 except Exception as e:
     print(f"[ERROR] Failed to import app: {e}")
