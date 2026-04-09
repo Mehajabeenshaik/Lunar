@@ -6,6 +6,12 @@ type: rl-environment
 runtime: docker
 app: app.py
 port: 7860
+
+graders:
+  - name: ComprehensiveGrader
+    type: deterministic
+    description: Unified grader for all 32 tasks
+
 tasks:
   - id: warehouse_novice
     grader: ComprehensiveGrader
@@ -71,3 +77,6 @@ tasks:
     grader: ComprehensiveGrader
   - id: optimization_latency
     grader: ComprehensiveGrader
+
+total_tasks: 32
+total_graders: 1
