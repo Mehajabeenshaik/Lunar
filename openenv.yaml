@@ -11,6 +11,7 @@ graders:
   - name: ComprehensiveGrader
     type: deterministic
     description: Unified grader for all 32 tasks
+    task_count: 32
 
 tasks:
   - id: warehouse_novice
