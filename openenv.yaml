@@ -45,7 +45,7 @@ tasks:
     domain: warehouse
     max_steps: 20
     has_grader: true
-    grader_type: "WarehouseNoviceGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: warehouse_easy
     name: "Warehouse Easy"
@@ -54,7 +54,7 @@ tasks:
     domain: warehouse
     max_steps: 30
     has_grader: true
-    grader_type: "WarehouseEasyGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: warehouse_medium
     name: "Warehouse Medium"
@@ -63,7 +63,7 @@ tasks:
     domain: warehouse
     max_steps: 60
     has_grader: true
-    grader_type: "WarehouseMediumGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: warehouse_intermediate
     name: "Warehouse Intermediate"
@@ -72,7 +72,7 @@ tasks:
     domain: warehouse
     max_steps: 60
     has_grader: true
-    grader_type: "WarehouseIntermediateGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: warehouse_hard
     name: "Warehouse Hard"
@@ -81,7 +81,7 @@ tasks:
     domain: warehouse
     max_steps: 90
     has_grader: true
-    grader_type: "WarehouseHardGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: warehouse_extreme
     name: "Warehouse Extreme"
@@ -90,7 +90,7 @@ tasks:
     domain: warehouse
     max_steps: 120
     has_grader: true
-    grader_type: "WarehouseExtremeGrader"
+    grader_type: "ComprehensiveGrader"
 
   # ===== DATA PIPELINE (8 tasks) =====
   - id: data_ingestion_simple
@@ -99,7 +99,7 @@ tasks:
     difficulty: easy
     domain: data_pipeline
     has_grader: true
-    grader_type: "DataIngestionSimpleGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: data_ingestion_complex
     name: "Data Ingestion Complex"
@@ -107,7 +107,7 @@ tasks:
     difficulty: hard
     domain: data_pipeline
     has_grader: true
-    grader_type: "DataIngestionComplexGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: data_cleaning_basic
     name: "Data Cleaning Basic"
@@ -115,7 +115,7 @@ tasks:
     difficulty: easy
     domain: data_pipeline
     has_grader: true
-    grader_type: "DataCleaningBasicGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: data_cleaning_advanced
     name: "Data Cleaning Advanced"
@@ -123,7 +123,7 @@ tasks:
     difficulty: hard
     domain: data_pipeline
     has_grader: true
-    grader_type: "DataCleaningAdvancedGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: data_validation_schema
     name: "Data Validation Schema"
@@ -131,7 +131,7 @@ tasks:
     difficulty: intermediate
     domain: data_pipeline
     has_grader: true
-    grader_type: "DataValidationSchemaGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: data_validation_quality
     name: "Data Validation Quality"
@@ -139,7 +139,7 @@ tasks:
     difficulty: hard
     domain: data_pipeline
     has_grader: true
-    grader_type: "DataValidationQualityGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: data_transformation_etl
     name: "Data Transformation ETL"
@@ -147,7 +147,7 @@ tasks:
     difficulty: hard
     domain: data_pipeline
     has_grader: true
-    grader_type: "DataTransformationETLGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: data_export_format
     name: "Data Export Format"
@@ -155,7 +155,7 @@ tasks:
     difficulty: intermediate
     domain: data_pipeline
     has_grader: true
-    grader_type: "DataExportFormatGrader"
+    grader_type: "ComprehensiveGrader"
 
   # ===== CODE REVIEW (8 tasks) =====
   - id: code_style_compliance
@@ -164,7 +164,7 @@ tasks:
     difficulty: easy
     domain: code_review
     has_grader: true
-    grader_type: "CodeStyleComplianceGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: code_performance_optimization
     name: "Code Performance Optimization"
@@ -172,7 +172,7 @@ tasks:
     difficulty: hard
     domain: code_review
     has_grader: true
-    grader_type: "CodePerformanceOptimizationGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: code_security_vulnerabilities
     name: "Code Security Vulnerabilities"
@@ -180,7 +180,7 @@ tasks:
     difficulty: hard
     domain: code_review
     has_grader: true
-    grader_type: "CodeSecurityVulnerabilitiesGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: code_maintainability_metrics
     name: "Code Maintainability Metrics"
@@ -188,7 +188,7 @@ tasks:
     difficulty: intermediate
     domain: code_review
     has_grader: true
-    grader_type: "CodeMaintainabilityMetricsGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: code_refactoring_simple
     name: "Code Refactoring Simple"
@@ -196,7 +196,7 @@ tasks:
     difficulty: intermediate
     domain: code_review
     has_grader: true
-    grader_type: "CodeRefactoringSimpleGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: code_refactoring_complex
     name: "Code Refactoring Complex"
@@ -204,7 +204,7 @@ tasks:
     difficulty: hard
     domain: code_review
     has_grader: true
-    grader_type: "CodeRefactoringComplexGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: code_testing_coverage
     name: "Code Testing Coverage"
@@ -212,7 +212,7 @@ tasks:
     difficulty: intermediate
     domain: code_review
     has_grader: true
-    grader_type: "CodeTestingCoverageGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: code_integration_testing
     name: "Code Integration Testing"
@@ -220,7 +220,7 @@ tasks:
     difficulty: hard
     domain: code_review
     has_grader: true
-    grader_type: "CodeIntegrationTestingGrader"
+    grader_type: "ComprehensiveGrader"
 
   # ===== RESOURCE ALLOCATION (5 tasks) =====
   - id: resource_budget_simple
@@ -229,7 +229,7 @@ tasks:
     difficulty: easy
     domain: resource_allocation
     has_grader: true
-    grader_type: "ResourceBudgetSimpleGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: resource_budget_complex
     name: "Resource Budget Complex"
@@ -237,7 +237,7 @@ tasks:
     difficulty: hard
     domain: resource_allocation
     has_grader: true
-    grader_type: "ResourceBudgetComplexGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: resource_scheduling_tasks
     name: "Resource Scheduling Tasks"
@@ -245,7 +245,7 @@ tasks:
     difficulty: intermediate
     domain: resource_allocation
     has_grader: true
-    grader_type: "ResourceSchedulingTasksGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: resource_scheduling_teams
     name: "Resource Scheduling Teams"
@@ -253,7 +253,7 @@ tasks:
     difficulty: hard
     domain: resource_allocation
     has_grader: true
-    grader_type: "ResourceSchedulingTeamsGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: resource_capacity_planning
     name: "Resource Capacity Planning"
@@ -261,7 +261,7 @@ tasks:
     difficulty: hard
     domain: resource_allocation
     has_grader: true
-    grader_type: "ResourceCapacityPlanningGrader"
+    grader_type: "ComprehensiveGrader"
 
   # ===== SYSTEM OPTIMIZATION (5 tasks) =====
   - id: optimization_query_basic
@@ -270,7 +270,7 @@ tasks:
     difficulty: intermediate
     domain: system_optimization
     has_grader: true
-    grader_type: "OptimizationQueryBasicGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: optimization_query_advanced
     name: "Optimization Query Advanced"
@@ -278,7 +278,7 @@ tasks:
     difficulty: hard
     domain: system_optimization
     has_grader: true
-    grader_type: "OptimizationQueryAdvancedGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: optimization_memory_usage
     name: "Optimization Memory Usage"
@@ -286,7 +286,7 @@ tasks:
     difficulty: hard
     domain: system_optimization
     has_grader: true
-    grader_type: "OptimizationMemoryUsageGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: optimization_throughput
     name: "Optimization Throughput"
@@ -294,7 +294,7 @@ tasks:
     difficulty: hard
     domain: system_optimization
     has_grader: true
-    grader_type: "OptimizationThroughputGrader"
+    grader_type: "ComprehensiveGrader"
 
   - id: optimization_latency
     name: "Optimization Latency"
@@ -302,7 +302,7 @@ tasks:
     difficulty: hard
     domain: system_optimization
     has_grader: true
-    grader_type: "OptimizationLatencyGrader"
+    grader_type: "ComprehensiveGrader"
 
 api:
   host: "0.0.0.0"
