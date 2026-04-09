@@ -220,15 +220,12 @@ async def reset_environment(
                 detail=f"Unknown task: {final_task}. Available tasks: {list(get_task_variants().keys())[:5]}..."
             )
 
-        # Create environment
-        env = MultiDomainEnv(final_task)
+        # Create session (creates MultiDomainEnv internally)
+        session_id = manager.create_session(final_task)
+        env = manager.get_session(session_id)
+        
+        # Initialize environment state
         initial_state = env.reset()
-
-        # Register session
-        session_id = manager.add_session(
-            task_id=final_task,
-            env=env
-        )
 
         return ResetResponse(
             session_id=session_id,
@@ -251,12 +248,10 @@ async def step_environment(
 ):
     """Execute one environment step."""
     try:
-        # Get session
-        session = manager.get_session(session_id)
-        if not session:
+        # Get environment from session
+        env = manager.get_session(session_id)
+        if not env:
             raise HTTPException(status_code=404, detail=f"Session not found: {session_id}")
-
-        env = session["env"]
 
         # Handle warehouse-specific action conversion
         action = req.action
@@ -279,15 +274,13 @@ async def step_environment(
         if is_done:
             final_reward = env.get_episode_reward()
 
-        # Update session
-        manager.update_session(
-            session_id,
-            cumulative_reward=session.get("cumulative_reward", 0.0) + reward,
-            current_step=env.current_step,
-            done=is_done,
-            final_reward=final_reward if is_done else None
-        )
+        # Record reward in session manager
+        manager.record_reward(session_id, final_reward)
 
+        # Calculate cumulative reward
+        rewards = manager.session_rewards.get(session_id, [])
+        cumulative_reward = sum(rewards) if rewards else 0.0
+        
         return StepResponse(
             session_id=session_id,
             state=next_state,
@@ -296,7 +289,7 @@ async def step_environment(
             info={
                 "current_step": env.current_step,
                 "max_steps": env.max_steps,
-                "cumulative_reward": session.get("cumulative_reward", 0.0) + reward
+                "cumulative_reward": cumulative_reward
             }
         )
 
@@ -311,19 +304,18 @@ async def step_environment(
 async def get_state(session_id: str = Path(..., description="Session ID")):
     """Get session state by path parameter."""
     try:
-        session = manager.get_session(session_id)
-        if not session:
-            raise HTTPException(status_code=404, detail=f"Session not found: {session_id}")
-
-        env = session["env"]
+        env = manager.get_session(session_id)
+        metadata = manager.get_metadata(session_id)
+        rewards = manager.session_rewards.get(session_id, [])
+        cumulative_reward = sum(rewards) if rewards else 0.0
 
         return StateResponse(
             session_id=session_id,
-            task=session.get("task_id", "unknown"),
+            task=metadata.get("task", "unknown"),
             state=env.state.copy() if env.state else {},
-            steps=env.current_step,
-            cumulative_reward=session.get("cumulative_reward", 0.0),
-            done=session.get("done", False)
+            steps=metadata.get("steps", 0),
+            cumulative_reward=cumulative_reward,
+            done=metadata.get("done", False)
         )
 
     except HTTPException:
@@ -360,7 +352,7 @@ async def get_leaderboard(limit: int = Query(100, ge=1, le=1000)):
     try:
         leaderboard = manager.get_leaderboard(limit=limit)
         return LeaderboardResponse(
-            total_sessions=manager.get_session_count(),
+            total_sessions=len(manager.sessions),
             leaderboard=leaderboard
         )
     except Exception as e:

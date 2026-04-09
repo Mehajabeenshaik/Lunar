@@ -1,12 +1,12 @@
 """Hybrid session management: in-memory cache + SQLite persistence for multi-worker support."""
 
 from uuid import uuid4
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Any
 from datetime import datetime, timedelta
 import json
 import sqlite3
 from pathlib import Path
-from .env import WarehouseEnv
+from .multi_domain_env import MultiDomainEnv
 
 
 class SessionManager:
@@ -19,7 +19,7 @@ class SessionManager:
     
     def __init__(self, max_sessions: int = 100, session_timeout_hours: int = 2, 
                  db_path: str = ".sessions/lunar.db"):
-        self.sessions: Dict[str, WarehouseEnv] = {}
+        self.sessions: Dict[str, MultiDomainEnv] = {}
         self.session_metadata: Dict[str, dict] = {}
         self.leaderboard: Dict[str, float] = {}
         self.session_rewards: Dict[str, List[float]] = {}
@@ -135,7 +135,7 @@ class SessionManager:
             self.delete_session(oldest)
         
         session_id = str(uuid4())
-        self.sessions[session_id] = WarehouseEnv(task=task)
+        self.sessions[session_id] = MultiDomainEnv(task_id=task)
         self.session_metadata[session_id] = {
             "task": task,
             "created_at": datetime.now().isoformat(),
@@ -145,7 +145,7 @@ class SessionManager:
         self.session_rewards[session_id] = []
         return session_id
     
-    def get_session(self, session_id: str) -> WarehouseEnv:
+    def get_session(self, session_id: str) -> MultiDomainEnv:
         """Get environment for session."""
         if session_id not in self.sessions:
             raise ValueError(f"Session {session_id} not found")
