@@ -50,6 +50,8 @@ class StepRequest(BaseModel):
     1. {\"action\": {\"reorder_quantities\": [...], \"transfers\": [...]}}
     2. {\"reorder_quantities\": [...], \"transfers\": [...]}
     """
+    model_config = {"extra": "allow"}  # Allow extra fields
+    
     action: Optional[Dict[str, Any]] = Field(None, description="Action to execute in the environment")
     reorder_quantities: Optional[list] = Field(None, description="Reorder quantities (if not in action)")
     transfers: Optional[list] = Field(None, description="Transfers (if not in action)")
@@ -62,7 +64,13 @@ class StepRequest(BaseModel):
             return {
                 "reorder_quantities": self.reorder_quantities or [],
                 "transfers": self.transfers or []}
-        raise ValueError("No action provided")
+        else:
+            # Try to extract from extra fields
+            extra_dict = {k: v for k, v in self.__dict__.items() 
+                         if k not in ['action', 'reorder_quantities', 'transfers']}
+            if extra_dict:
+                return extra_dict
+        raise ValueError("No action data provided")
 
 
 class StepResponse(BaseModel):
