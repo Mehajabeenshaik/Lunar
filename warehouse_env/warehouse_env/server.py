@@ -100,6 +100,8 @@ class ManifestResponse(BaseModel):
     tasks: List[str] = Field(..., description="Available tasks")
     domains: List[str] = Field(..., description="Domains covered")
     features: Dict[str, Any] = Field(..., description="Available features")
+    task_specs: Dict[str, Dict[str, Any]] = Field(..., description="Task specifications with grader info")
+    graders: List[str] = Field(..., description="Task IDs that have graders")
 
 
 class RenderResponse(BaseModel):
@@ -250,10 +252,30 @@ async def stats():
 @app.get("/manifest", response_model=ManifestResponse)
 async def manifest():
     """Return OpenEnv specification for this environment."""
+    # Build task specs with grader information
+    task_variants = get_task_variants()
+    task_specs = {}
+    tasks_with_graders = []
+    
+    for task_id, task_info in task_variants.items():
+        try:
+            grader = get_grader(task_id)
+            task_specs[task_id] = {
+                **task_info,
+                "has_grader": True,
+                "grader_type": grader.__class__.__name__
+            }
+            tasks_with_graders.append(task_id)
+        except:
+            task_specs[task_id] = {
+                **task_info,
+                "has_grader": False
+            }
+    
     return ManifestResponse(
         version="3.0.0",
         name="LUNAR: Multi-Domain RL Environment",
-        description="Multi-domain optimization including warehouse management, supply chain, demand forecasting, production scheduling, and resource allocation",
+        description="Warehouse inventory optimization with multi-site coordination",
         observation_space={
             "type": "object",
             "properties": {
@@ -280,22 +302,18 @@ async def manifest():
                 "info": {"type": "object"},
             }
         },
-        tasks=list(get_task_variants().keys()),
-        domains=[
-            "warehouse_management",
-            "supply_chain_logistics",
-            "demand_forecasting",
-            "production_scheduling",
-            "dynamic_resource_allocation"
-        ],
+        tasks=list(task_variants.keys()),
+        domains=["warehouse_management"],
         features={
-            "multi_agent": True,
+            "multi_agent": False,
             "session_management": True,
             "automatic_cleanup": True,
             "leaderboard": True,
-            "task_variants": len(get_task_variants()),
-            "multi_domain": True,
-        }
+            "task_count": len(task_variants),
+            "tasks_with_graders": len(tasks_with_graders),
+        },
+        task_specs=task_specs,
+        graders=tasks_with_graders
     )
 
 

@@ -1,136 +1,74 @@
-name: lunar
+name: lunar-warehouse-benchmark
+spec_version: 1
 version: "3.0.0"
-description: "LUNAR: Multi-Domain Reinforcement Learning Environment - 21 task variants across 5 semantic domains"
+description: "LUNAR: Warehouse Inventory Optimization Benchmark - Real-world RL environment for multi-warehouse supply chain coordination"
+
+type: rl-environment
+runtime: docker
+app: app.py
+port: 7860
+tagline: "Train agents to optimize warehouse inventory across multiple locations with demand forecasting and constraints"
 
 features:
-  multi_domain: true
-  task_variants: 21
+  multi_domain: false
+  task_count: 3
   session_management: true
   leaderboard: true
   multi_agent: false
+  difficulty_progression: true
+  deterministic_graders: true
+  partial_credit: true
 
 domains:
   - warehouse_management
-  - supply_chain_logistics
-  - demand_forecasting
-  - production_scheduling
-  - dynamic_resource_allocation
 
 tasks:
-  # Domain 1: Warehouse Management (6 tasks)
+  # Domain: Warehouse Management (3 production-ready tasks)
   - id: warehouse_easy
     name: "Warehouse Easy"
-    description: "1 warehouse, fixed demand, 30 steps"
+    description: "Single warehouse with fixed demand. Learn to balance inventory costs vs service level."
     difficulty: easy
     domain: warehouse_management
-  - id: warehouse_easy_volatile
-    name: "Warehouse Easy - Volatile Demand"
-    description: "1 warehouse, variable demand, 30 steps"
-    difficulty: easy
-    domain: warehouse_management
+    max_steps: 30
+    observation_fields:
+      - warehouse_levels
+      - demand_forecast
+      - supplier_status
+      - day
+      - holding_costs
+      - shortage_penalty
+    
   - id: warehouse_medium
     name: "Warehouse Medium"
-    description: "3 warehouses, variable demand, 60 steps"
+    description: "Three warehouses with variable demand. Coordinate inventory across network with transfer costs."
     difficulty: medium
     domain: warehouse_management
-  - id: warehouse_medium_volatile
-    name: "Warehouse Medium - Volatile Demand"
-    description: "3 warehouses, high volatility, 60 steps"
-    difficulty: medium
-    domain: warehouse_management
+    max_steps: 60
+    observation_fields:
+      - warehouse_levels
+      - demand_forecast
+      - supplier_status
+      - day
+      - holding_costs
+      - shortage_penalty
+      - transfer_costs
+    
   - id: warehouse_hard
     name: "Warehouse Hard"
-    description: "5 warehouses, seasonal demand, constraints, 90 steps"
+    description: "Five warehouses with seasonal demand, supplier constraints, and aggressive SLA requirements. Master complex multi-site logistics."
     difficulty: hard
     domain: warehouse_management
-  - id: warehouse_hard_stress
-    name: "Warehouse Hard - Stress Test"
-    description: "5 warehouses, extreme volatility, tight constraints, 90 steps"
-    difficulty: hard
-    domain: warehouse_management
-
-  # Domain 2: Supply Chain Logistics (4 tasks)
-  - id: supply_chain_basic
-    name: "Supply Chain - Basic"
-    description: "2-tier supplier network with fixed lead times, 40 steps"
-    difficulty: easy
-    domain: supply_chain_logistics
-  - id: supply_chain_dynamic
-    name: "Supply Chain - Dynamic Pricing"
-    description: "3-tier network with dynamic pricing and variable lead times, 60 steps"
-    difficulty: medium
-    domain: supply_chain_logistics
-  - id: supply_chain_disruption
-    name: "Supply Chain - Disruption"
-    description: "4-tier network with supplier disruptions and recovery, 80 steps"
-    difficulty: hard
-    domain: supply_chain_logistics
-  - id: supply_chain_optimization
-    name: "Supply Chain - Optimization"
-    description: "Full network optimization with cost minimization and constraint satisfaction, 100 steps"
-    difficulty: hard
-    domain: supply_chain_logistics
-
-  # Domain 3: Demand Forecasting (4 tasks)
-  - id: forecast_stationary
-    name: "Forecasting - Stationary"
-    description: "Constant demand with Gaussian noise, 50 steps"
-    difficulty: easy
-    domain: demand_forecasting
-  - id: forecast_seasonal
-    name: "Forecasting - Seasonal"
-    description: "Seasonal patterns with 80% predictability, 90 steps"
-    difficulty: medium
-    domain: demand_forecasting
-  - id: forecast_trend
-    name: "Forecasting - Trend"
-    description: "Linear and non-linear trends with noise, 100 steps"
-    difficulty: medium
-    domain: demand_forecasting
-  - id: forecast_chaotic
-    name: "Forecasting - Chaotic"
-    description: "Chaotic patterns with 50% predictability (adversarial), 120 steps"
-    difficulty: hard
-    domain: demand_forecasting
-
-  # Domain 4: Production Scheduling (4 tasks)
-  - id: production_simple
-    name: "Production - Simple"
-    description: "Single machine, 5 jobs, no precedence constraints, 30 steps"
-    difficulty: easy
-    domain: production_scheduling
-  - id: production_complex
-    name: "Production - Complex"
-    description: "3 machines, 20 jobs with precedence and setup times, 60 steps"
-    difficulty: medium
-    domain: production_scheduling
-  - id: production_flexible
-    name: "Production - Flexible"
-    description: "5 machines, 30 jobs with flexible routing, 90 steps"
-    difficulty: hard
-    domain: production_scheduling
-  - id: production_realtime
-    name: "Production - Real-time"
-    description: "Real-time job arrivals, dynamic rescheduling, 120 steps"
-    difficulty: hard
-    domain: production_scheduling
-
-  # Domain 5: Dynamic Resource Allocation (3 tasks)
-  - id: resource_basic
-    name: "Resource Allocation - Basic"
-    description: "5 resources, 10 consumers, 50 steps"
-    difficulty: easy
-    domain: dynamic_resource_allocation
-  - id: resource_advanced
-    name: "Resource Allocation - Advanced"
-    description: "20 resources, 50 consumers with prioritization, 80 steps"
-    difficulty: medium
-    domain: dynamic_resource_allocation
-  - id: resource_extreme
-    name: "Resource Allocation - Extreme"
-    description: "100 resources, 200 consumers with SLA constraints, 150 steps"
-    difficulty: hard
-    domain: dynamic_resource_allocation
+    max_steps: 90
+    observation_fields:
+      - warehouse_levels
+      - demand_forecast
+      - supplier_status
+      - day
+      - holding_costs
+      - shortage_penalty
+      - transfer_costs
+      - seasonal_factors
+      - supplier_constraints
 
 api:
   host: "0.0.0.0"
@@ -147,36 +85,32 @@ api:
       description: "List all available tasks"
     - path: "/reset"
       method: "POST"
-      description: "Reset environment to initial state"
+      description: "Initialize a new episode with optional task selection"
     - path: "/step"
       method: "POST"
-      description: "Execute one environment step"
-    - path: "/state"
+      description: "Execute one environment step with agent action"
+    - path: "/state/{session_id}"
       method: "GET"
-      description: "Get current environment state"
-    - path: "/render"
-      method: "GET"
-      description: "Render environment visualization"
+      description: "Get complete session state"
     - path: "/sessions"
       method: "GET"
-      description: "Get active sessions"
+      description: "List active sessions"
     - path: "/leaderboard"
       method: "GET"
-      description: "Get leaderboard rankings"
-    - path: "/stats"
-      method: "GET"
-      description: "Get environment statistics"
+      description: "Get leaderboard rankings by reward"
     - path: "/docs"
       method: "GET"
-      description: "Interactive API documentation"
+      description: "Interactive Swagger API documentation"
 
-observation_space:
-  type: "dict"
-  description: "Task-specific state representation"
-
-action_space:
-  type: "dict"
-  description: "Task-specific action specification"
+reward_info:
+  type: "float"
+  minimum: 0.0
+  maximum: 1.0
+  description: "Partial credit reward. Never binary (0 or 1 only), always provides progress signal"
+  scaling:
+    warehouse_easy: "0.0-1.0 based on service level achievement"
+    warehouse_medium: "0.0-1.0 based on cost efficiency + service level"
+    warehouse_hard: "0.0-1.0 based on multi-objective optimization: cost, service, constraints"
 
 reward_function: "Service level (80% minimum) - 0.1*(holding_cost + shortage_penalty)/max_possible"
 
