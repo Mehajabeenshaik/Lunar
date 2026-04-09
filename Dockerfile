@@ -30,7 +30,7 @@ RUN pip install --no-cache-dir openai>=1.3.0
 # Verify installation
 RUN python -c "import fastapi; import uvicorn; import pydantic; print('✓ All dependencies installed')"
 
-# Test app imports
+# Test app can be imported
 RUN python -c "from app import app; print('✓ App imports successfully')"
 
 # Health check with proper timeout
@@ -40,6 +40,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=2 \
 # Expose port
 EXPOSE 7860
 
-# Run FastAPI app with uvicorn CLI (more reliable in containers)
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860", "--log-level", "info"]
+# Run FastAPI app directly with Python (avoids uvicorn import issues)
+# This executes the if __name__ == "__main__" block which starts uvicorn
+CMD ["python", "app.py"]
 
