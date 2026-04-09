@@ -347,10 +347,28 @@ async def manifest():
 
 @app.get("/tasks", response_model=TasksListResponse)
 async def list_tasks():
-    """List all available task variants."""
+    """List all available task variants with grader information."""
+    task_variants = get_task_variants()
+    
+    # Enhance each task with grader information
+    tasks_with_graders = {}
+    for task_id, task_info in task_variants.items():
+        try:
+            grader = get_grader(task_id)
+            tasks_with_graders[task_id] = {
+                **task_info,
+                "has_grader": True,
+                "grader_type": grader.__class__.__name__
+            }
+        except:
+            tasks_with_graders[task_id] = {
+                **task_info,
+                "has_grader": False
+            }
+    
     return TasksListResponse(
-        total=len(get_task_variants()),
-        tasks=get_task_variants()
+        total=len(task_variants),
+        tasks=tasks_with_graders
     )
 
 
