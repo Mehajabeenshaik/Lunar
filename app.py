@@ -4,11 +4,11 @@ import os
 import sys
 from pathlib import Path
 
-# Add warehouse_env to path
-sys.path.insert(0, str(Path(__file__).parent / "warehouse_env"))
+# Add project root to path for proper imports
+sys.path.insert(0, str(Path(__file__).parent))
 
-# Import app
-from warehouse_env.server import app
+# Import app from the actual server location
+from warehouse_env.warehouse_env.server import app
 
 if __name__ == "__main__":
     import uvicorn

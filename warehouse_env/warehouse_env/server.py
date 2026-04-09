@@ -313,7 +313,7 @@ async def list_sessions():
     """List all active sessions."""
     return SessionsListResponse(
         active_sessions=len(manager.sessions),
-        sessions=manager.list_sessions()
+        sessions=list(manager.sessions.keys())
     )
 
 
