@@ -40,6 +40,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=2 \
 # Expose port
 EXPOSE 7860
 
-# Run app using uvicorn with explicit module
-CMD ["uvicorn", "--host", "0.0.0.0", "--port", "7860", "--app-dir", "/app", "app:app"]
+# Run FastAPI app directly
+CMD ["python", "app.py"]
 

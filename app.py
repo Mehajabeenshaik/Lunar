@@ -13,4 +13,12 @@ from warehouse_env.warehouse_env.server_multi_domain import app
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 7860))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    host = os.getenv("HOST", "0.0.0.0")
+    
+    # Run with uvicorn (production-grade ASGI server)
+    uvicorn.run(
+        app,
+        host=host,
+        port=port,
+        log_level="info"
+    )
