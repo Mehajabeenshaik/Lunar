@@ -298,7 +298,12 @@ async def manifest():
                 }
             }
             tasks_with_graders.append(task_id)
-        except:
+        except Exception as e:
+            # Log error for debugging
+            print(f"[ERROR] get_grader({task_id}) failed: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+            
             num_wh = task_info.get('num_warehouses', 1)
             task_specs[task_id] = {
                 **task_info,
@@ -373,7 +378,12 @@ async def list_tasks():
                     "transfers": "Array of [from_warehouse, to_warehouse, quantity] tuples"
                 }
             }
-        except:
+        except Exception as e:
+            # Log error for debugging
+            print(f"[ERROR] get_grader({task_id}) failed: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+            
             num_wh = task_info.get('num_warehouses', 1)
             tasks_with_graders[task_id] = {
                 **task_info,
