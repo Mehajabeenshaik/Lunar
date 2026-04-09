@@ -16,6 +16,8 @@ setup(
         "uvicorn>=0.23",
         "openai>=1.0",
         "python-dotenv>=1.0",
+        "pyyaml>=6.0",
+        "requests>=2.31",
     ],
     extras_require={
         "dev": [
