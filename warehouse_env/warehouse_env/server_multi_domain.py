@@ -198,6 +198,7 @@ async def get_tasks():
                 "domain": task_info.get("domain", ""),
                 "difficulty": task_info.get("difficulty", ""),
                 "has_grader": True,
+                "grader_type": task_info.get("grader_type", "ComprehensiveGrader"),
                 "max_steps": task_info.get("max_steps", 100),
                 "version": task_info.get("version", "1.0"),
             }
