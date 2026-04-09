@@ -172,15 +172,9 @@ async def get_manifest():
                 "max_steps": task_info.get("max_steps", 100),
             }
 
-        # Domain-level graders (not task-level)
-        # One grader per domain handles multiple tasks
-        domain_graders = [
-            "warehouse_grader",
-            "data_pipeline_grader",
-            "code_review_grader",
-            "resource_allocation_grader",
-            "system_optimization_grader"
-        ]
+        # Single unified grader (must match openenv.yaml)
+        # All 32 tasks use ComprehensiveGrader
+        unified_graders = ["ComprehensiveGrader"]
 
         return ManifestResponse(
             version="2.0",
@@ -190,7 +184,7 @@ async def get_manifest():
             domain_count=len(domains),
             domains=domains,
             tasks=list(tasks.keys()),
-            graders=domain_graders,
+            graders=unified_graders,
             features={
                 "tasks_with_graders": len(tasks),
                 "multi_domain": True,
