@@ -6,7 +6,7 @@ import asyncio
 import traceback
 from typing import Optional, Any, Dict, List
 from fastapi import FastAPI, HTTPException, Query, Body
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ValidationError
 import uvicorn
 
 from .env import WarehouseEnv
@@ -28,10 +28,14 @@ manager = SessionManager(max_sessions=100, session_timeout_hours=2)
 
 
 class ResetRequest(BaseModel):
-    """Optional reset request - all fields are optional with defaults."""
+    """Reset request - supports both query params and body."""
     task: Optional[str] = Field(
         default="warehouse_easy",
         description="Task ID (warehouse_easy, warehouse_medium, supply_chain_basic, etc). Defaults to warehouse_easy."
+    )
+    session_id: Optional[str] = Field(
+        default=None,
+        description="Optional session ID to reuse"
     )
 
 
@@ -104,34 +108,40 @@ class RenderResponse(BaseModel):
 
 @app.post("/reset", response_model=ResetResponse)
 async def reset(
-    task: str = Query("warehouse_easy", description="Task ID (warehouse_easy, warehouse_medium, supply_chain_basic, etc)"),
-    session_id: str = Query(None, description="Optional session ID to reuse")
+    req: Optional[ResetRequest] = Body(None),
+    task: Optional[str] = Query(None, description="Task ID (overrides body if provided)"),
+    session_id: Optional[str] = Query(None, description="Session ID (overrides body if provided)")
 ):
     """Reset environment to initial state (create new session if needed).
     
-    Args:
-        task: Task ID to run (defaults to warehouse_easy)
-        session_id: Optional session ID to reuse
+    Accepts task and session_id via:
+    - Query parameters: /reset?task=warehouse_easy&session_id=xyz
+    - Request body: POST with {"task": "warehouse_easy", "session_id": "xyz"}
+    - Mixed: /reset?session_id=xyz with body {"task": "warehouse_easy"}
     """
     try:
+        # Use query params if provided, otherwise use body, otherwise use defaults
+        final_task = task or (req.task if req else None) or "warehouse_easy"
+        final_session_id = session_id or (req.session_id if req else None)
+        
         # Validate task
-        if not is_valid_task(task):
+        if not is_valid_task(final_task):
             raise HTTPException(
                 status_code=400,
-                detail=f"Unknown task: {task}. Valid tasks: {list(get_task_variants().keys())}"
+                detail=f"Unknown task: {final_task}. Valid tasks: {list(get_task_variants().keys())}"
             )
         
         # Create or reuse session
-        if not session_id:
-            session_id = manager.create_session(task)
+        if not final_session_id:
+            final_session_id = manager.create_session(final_task)
         
-        env = manager.get_session(session_id)
+        env = manager.get_session(final_session_id)
         obs = env.reset()
         
         return ResetResponse(
             observation=obs.model_dump(),
-            task=task,
-            session_id=session_id
+            task=final_task,
+            session_id=final_session_id
         )
     except HTTPException:
         raise
@@ -155,10 +165,20 @@ async def step(req: StepRequest, session_id: str = Query(...)):
     
     try:
         action = Action(**req.action)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid action: {str(e)}")
+    except (ValueError, ValidationError) as e:
+        error_msg = f"Invalid action: {str(e)}"
+        raise HTTPException(status_code=400, detail=error_msg)
+    except Exception as e:
+        error_msg = f"Action processing error: {str(e)}\n{traceback.format_exc()}"
+        print(error_msg, file=sys.stderr)
+        raise HTTPException(status_code=400, detail=f"Invalid action format")
     
-    obs, reward = env.step(action)
+    try:
+        obs, reward = env.step(action)
+    except Exception as e:
+        error_msg = f"Step execution failed: {str(e)}\n{traceback.format_exc()}"
+        print(error_msg, file=sys.stderr)
+        raise HTTPException(status_code=500, detail=f"Step execution failed: {str(e)}")
     
     # Record reward for leaderboard
     manager.record_reward(session_id, reward.value)
