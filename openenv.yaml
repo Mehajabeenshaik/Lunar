@@ -1,6 +1,91 @@
 spec_version: 1
 name: lunar-comprehensive-benchmark
 version: "2.0"
+description: "Lunar: 32-task multi-domain RL benchmark for AI agent training across warehouse optimization, data pipelines, code review, resource allocation, and system optimization."
+type: rl-environment
+runtime: docker
+app: app.py
+port: 7860
+
+# Graders
+graders:
+  - name: ComprehensiveGrader
+    description: "Unified deterministic grader for all 32 tasks"
+    tasks: 32
+
+# Benchmark domains with task-to-grader mappings
+benchmarks:
+  - name: warehouse
+    description: "Inventory management and warehouse optimization"
+    tasks: 6
+    grader: ComprehensiveGrader
+    task_ids:
+      - warehouse_novice
+      - warehouse_easy
+      - warehouse_medium
+      - warehouse_intermediate
+      - warehouse_hard
+      - warehouse_extreme
+  
+  - name: data_pipeline
+    description: "Data ingestion, cleaning, validation, transformation, and export"
+    tasks: 8
+    grader: ComprehensiveGrader
+    task_ids:
+      - data_ingestion_simple
+      - data_ingestion_complex
+      - data_cleaning_basic
+      - data_cleaning_advanced
+      - data_validation_schema
+      - data_validation_quality
+      - data_transformation_etl
+      - data_export_format
+  
+  - name: code_review
+    description: "Code style, performance, security, maintainability, and testing"
+    tasks: 8
+    grader: ComprehensiveGrader
+    task_ids:
+      - code_style_compliance
+      - code_performance_optimization
+      - code_security_vulnerabilities
+      - code_maintainability_metrics
+      - code_refactoring_simple
+      - code_refactoring_complex
+      - code_testing_coverage
+      - code_integration_testing
+  
+  - name: resource_allocation
+    description: "Budget management, scheduling, and capacity planning"
+    tasks: 5
+    grader: ComprehensiveGrader
+    task_ids:
+      - resource_budget_simple
+      - resource_budget_complex
+      - resource_scheduling_tasks
+      - resource_scheduling_teams
+      - resource_capacity_planning
+  
+  - name: system_optimization
+    description: "Query optimization, memory usage, throughput, and latency"
+    tasks: 5
+    grader: ComprehensiveGrader
+    task_ids:
+      - optimization_query_basic
+      - optimization_query_advanced
+      - optimization_memory_usage
+      - optimization_throughput
+      - optimization_latency
+
+# Summary
+total_tasks: 32
+total_graders: 1
+total_domains: 5
+reward_bounds: [0.0, 1.0]
+reward_distribution: "partial_credit"
+spec_version: 1
+name: lunar-comprehensive-benchmark
+version: "2.0"
 description: >
   Lunar: 32-task multi-domain RL benchmark for AI agent training.
   Warehouse optimization, data pipelines, code review, resource allocation,
