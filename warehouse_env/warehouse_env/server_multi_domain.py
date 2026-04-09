@@ -111,6 +111,29 @@ class SessionsListResponse(BaseModel):
 
 # ===== Endpoints =====
 
+@app.get("/")
+async def root():
+    """Root endpoint - API information."""
+    return {
+        "name": "Lunar Comprehensive Benchmark",
+        "version": "2.0",
+        "description": "32-task multi-domain RL environment across 5 domains",
+        "status": "running",
+        "spec": "openenv/v1",
+        "endpoints": {
+            "health": "/health",
+            "manifest": "/manifest",
+            "tasks": "/tasks",
+            "reset": "/reset",
+            "step": "/step",
+            "state": "/state/{session_id}",
+            "docs": "/docs"
+        },
+        "total_tasks": get_task_count(),
+        "domains": get_domain_count()
+    }
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
