@@ -149,17 +149,25 @@ async def get_manifest():
                 "max_steps": task_info.get("max_steps", 100),
             }
 
-        graders = list(tasks.keys())
+        # Domain-level graders (not task-level)
+        # One grader per domain handles multiple tasks
+        domain_graders = [
+            "warehouse_grader",
+            "data_pipeline_grader",
+            "code_review_grader",
+            "resource_allocation_grader",
+            "system_optimization_grader"
+        ]
 
         return ManifestResponse(
             version="2.0",
             name="Lunar: Comprehensive Multi-Domain Benchmark",
-            description="31 tasks across 5 domains with deterministic grading",
+            description="32 tasks across 5 domains with deterministic grading",
             task_count=len(tasks),
             domain_count=len(domains),
             domains=domains,
             tasks=list(tasks.keys()),
-            graders=graders,
+            graders=domain_graders,
             features={
                 "tasks_with_graders": len(tasks),
                 "multi_domain": True,

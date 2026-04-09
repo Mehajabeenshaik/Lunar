@@ -30,38 +30,11 @@ domains:
   - system_optimization
 
 graders:
-  - warehouse_novice
-  - warehouse_easy
-  - warehouse_medium
-  - warehouse_intermediate
-  - warehouse_hard
-  - warehouse_extreme
-  - data_ingestion_simple
-  - data_ingestion_complex
-  - data_cleaning_basic
-  - data_cleaning_advanced
-  - data_validation_schema
-  - data_validation_quality
-  - data_transformation_etl
-  - data_export_format
-  - code_style_compliance
-  - code_performance_optimization
-  - code_security_vulnerabilities
-  - code_maintainability_metrics
-  - code_refactoring_simple
-  - code_refactoring_complex
-  - code_testing_coverage
-  - code_integration_testing
-  - resource_budget_simple
-  - resource_budget_complex
-  - resource_scheduling_tasks
-  - resource_scheduling_teams
-  - resource_capacity_planning
-  - optimization_query_basic
-  - optimization_query_advanced
-  - optimization_memory_usage
-  - optimization_throughput
-  - optimization_latency
+  - warehouse_grader
+  - data_pipeline_grader
+  - code_review_grader
+  - resource_allocation_grader
+  - system_optimization_grader
 
 tasks:
   # ===== WAREHOUSE (5 tasks) =====
