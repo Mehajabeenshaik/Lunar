@@ -1,7 +1,7 @@
 """Task graders for warehouse environment."""
 
 from typing import Dict, List
-from warehouse_env.models import State, Observation
+from .models import State, Observation
 import numpy as np
 
 

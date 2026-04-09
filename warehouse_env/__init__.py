@@ -12,6 +12,7 @@ from .warehouse_env import (
     graders,
     get_grader,
 )
+from .warehouse_env import graders as graders_module
 
 __all__ = [
     "State",

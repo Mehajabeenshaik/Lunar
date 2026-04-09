@@ -1,7 +1,7 @@
 """Enhanced task graders with 0.1-1.0 partial credit scale."""
 
 from typing import Dict, List, Tuple
-from warehouse_env.models import State
+from .models import State
 import numpy as np
 
 

@@ -7,17 +7,14 @@ Tests local deployment, verifies all 21 tasks, and formats submission checklist.
 import subprocess
 import json
 import sys
+import requests
 from typing import Dict, List, Tuple
 
 def test_local_health() -> Tuple[bool, str]:
     """Test local server health."""
     try:
-        result = subprocess.run(
-            ["powershell", "-Command", 
-             "Invoke-WebRequest http://localhost:7860/health -UseBasicParsing | ConvertFrom-Json | ConvertTo-Json"],
-            capture_output=True, text=True, timeout=5
-        )
-        if result.returncode == 0:
+        response = requests.get("http://localhost:7860/health", timeout=5)
+        if response.status_code == 200:
             return True, "✅ Local server responding"
         else:
             return False, "❌ Local server not responding"
@@ -27,13 +24,9 @@ def test_local_health() -> Tuple[bool, str]:
 def test_manifest() -> Tuple[bool, Dict]:
     """Test manifest endpoint."""
     try:
-        result = subprocess.run(
-            ["powershell", "-Command", 
-             "Invoke-WebRequest http://localhost:7860/manifest -UseBasicParsing | ConvertFrom-Json | ConvertTo-Json -Depth 3"],
-            capture_output=True, text=True, timeout=5
-        )
-        if result.returncode == 0:
-            return True, json.loads(result.stdout)
+        response = requests.get("http://localhost:7860/manifest", timeout=5)
+        if response.status_code == 200:
+            return True, response.json()
         else:
             return False, {}
     except Exception as e:
@@ -42,13 +35,9 @@ def test_manifest() -> Tuple[bool, Dict]:
 def test_tasks() -> Tuple[bool, int, List[str]]:
     """Test tasks endpoint."""
     try:
-        result = subprocess.run(
-            ["powershell", "-Command", 
-             "Invoke-WebRequest http://localhost:7860/tasks -UseBasicParsing | ConvertFrom-Json"],
-            capture_output=True, text=True, timeout=5
-        )
-        if result.returncode == 0:
-            data = json.loads(result.stdout)
+        response = requests.get("http://localhost:7860/tasks", timeout=5)
+        if response.status_code == 200:
+            data = response.json()
             tasks = list(data.get("tasks", {}).keys())
             return True, len(tasks), tasks
         else:
@@ -94,11 +83,11 @@ def main():
     # Test 3: Tasks
     print_section("3️⃣  AVAILABLE TASKS (21 TOTAL)")
     tasks_ok, task_count, task_list = test_tasks()
+    domains = {}
     if tasks_ok:
         print(f"✅ Total Tasks: {task_count}/21")
         
         # Group by domain
-        domains = {}
         for task in task_list:
             domain = task.split('_')[0]
             if domain not in domains:
