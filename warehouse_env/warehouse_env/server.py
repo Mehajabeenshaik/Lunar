@@ -291,13 +291,22 @@ async def manifest():
             task_specs[task_id] = {
                 **task_info,
                 "has_grader": True,
-                "grader_type": grader.__class__.__name__
+                "grader_type": grader.__class__.__name__,
+                "action_format": {
+                    "reorder_quantities": f"Array of {task_info['num_warehouses']} numbers (one per warehouse)",
+                    "transfers": "Array of [from_warehouse, to_warehouse, quantity] tuples"
+                }
             }
             tasks_with_graders.append(task_id)
         except:
+            num_wh = task_info.get('num_warehouses', 1)
             task_specs[task_id] = {
                 **task_info,
-                "has_grader": False
+                "has_grader": False,
+                "action_format": {
+                    "reorder_quantities": f"Array of {num_wh} numbers (one per warehouse)",
+                    "transfers": "Array of [from_warehouse, to_warehouse, quantity] tuples"
+                }
             }
     
     return ManifestResponse(
@@ -350,7 +359,7 @@ async def list_tasks():
     """List all available task variants with grader information."""
     task_variants = get_task_variants()
     
-    # Enhance each task with grader information
+    # Enhance each task with grader and action format information
     tasks_with_graders = {}
     for task_id, task_info in task_variants.items():
         try:
@@ -358,12 +367,21 @@ async def list_tasks():
             tasks_with_graders[task_id] = {
                 **task_info,
                 "has_grader": True,
-                "grader_type": grader.__class__.__name__
+                "grader_type": grader.__class__.__name__,
+                "action_format": {
+                    "reorder_quantities": f"Array of {task_info['num_warehouses']} numbers (one per warehouse)",
+                    "transfers": "Array of [from_warehouse, to_warehouse, quantity] tuples"
+                }
             }
         except:
+            num_wh = task_info.get('num_warehouses', 1)
             tasks_with_graders[task_id] = {
                 **task_info,
-                "has_grader": False
+                "has_grader": False,
+                "action_format": {
+                    "reorder_quantities": f"Array of {num_wh} numbers (one per warehouse)",
+                    "transfers": "Array of [from_warehouse, to_warehouse, quantity] tuples"
+                }
             }
     
     return TasksListResponse(
