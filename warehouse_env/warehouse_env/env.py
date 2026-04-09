@@ -70,9 +70,16 @@ class WarehouseEnv:
         if self.state is None:
             raise RuntimeError("Environment not reset. Call reset() first.")
         
-        # Validate action
-        if len(action.reorder_quantities) != self.num_warehouses:
-            error_msg = f"Expected {self.num_warehouses} reorder quantities, got {len(action.reorder_quantities)}"
+        # Validate and normalize action
+        reorder_quantities = list(action.reorder_quantities)
+        
+        # Auto-expand single value to all warehouses for convenience
+        if len(reorder_quantities) == 1 and self.num_warehouses > 1:
+            reorder_quantities = reorder_quantities * self.num_warehouses
+        
+        # Validate total count
+        if len(reorder_quantities) != self.num_warehouses:
+            error_msg = f"Expected {self.num_warehouses} reorder quantities, got {len(reorder_quantities)}"
             self.state.last_action_error = error_msg
             return Observation.from_state(self.state), Reward(value=0.0, info={"error": error_msg})
         
@@ -82,7 +89,7 @@ class WarehouseEnv:
         # Process reorders (with 2-day lead time, simplified to 1 in this version)
         new_levels = self.state.warehouse_levels.copy()
         for i in range(self.num_warehouses):
-            new_levels[i] += action.reorder_quantities[i]
+            new_levels[i] += reorder_quantities[i]
         
         # Process inter-warehouse transfers
         if len(action.transfers) == self.num_warehouses:
