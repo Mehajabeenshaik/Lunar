@@ -130,6 +130,11 @@ class WarehouseEasyGrader(ComprehensiveGrader):
         super().__init__("warehouse_easy")
 
 
+class WarehouseMediumGrader(ComprehensiveGrader):
+    def __init__(self):
+        super().__init__("warehouse_medium")
+
+
 class WarehouseIntermediateGrader(ComprehensiveGrader):
     def __init__(self):
         super().__init__("warehouse_intermediate")
@@ -279,6 +284,7 @@ class OptimizationLatencyGrader(ComprehensiveGrader):
 GRADER_REGISTRY = {
     "warehouse_novice": WarehouseNoviceGrader,
     "warehouse_easy": WarehouseEasyGrader,
+    "warehouse_medium": WarehouseMediumGrader,
     "warehouse_intermediate": WarehouseIntermediateGrader,
     "warehouse_hard": WarehouseHardGrader,
     "warehouse_extreme": WarehouseExtremeGrader,

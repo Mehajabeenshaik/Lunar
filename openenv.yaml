@@ -32,6 +32,7 @@ domains:
 graders:
   - warehouse_novice
   - warehouse_easy
+  - warehouse_medium
   - warehouse_intermediate
   - warehouse_hard
   - warehouse_extreme
@@ -81,6 +82,15 @@ tasks:
     max_steps: 30
     has_grader: true
     grader_type: "WarehouseEasyGrader"
+
+  - id: warehouse_medium
+    name: "Warehouse Medium"
+    description: "3 warehouses, variable demand, basic distribution"
+    difficulty: medium
+    domain: warehouse
+    max_steps: 60
+    has_grader: true
+    grader_type: "WarehouseMediumGrader"
 
   - id: warehouse_intermediate
     name: "Warehouse Intermediate"
@@ -357,7 +367,7 @@ reward_info:
   type: "float"
   minimum: 0.0
   maximum: 1.0
-  description: "Partial credit reward system across all 31 tasks"
+  description: "Partial credit reward system across all 32 tasks"
   features:
     - "Never binary (0 or 1 only)"
     - "Always provides progress signal"
@@ -368,16 +378,17 @@ reward_info:
 reward_function: "Domain-specific multi-objective optimization balancing: efficiency, quality, optimization, and constraints"
 
 task_statistics:
-  total_tasks: 31
+  total_tasks: 32
   total_domains: 5
-  warehouse_tasks: 5
+  warehouse_tasks: 6
   data_pipeline_tasks: 8
   code_review_tasks: 8
   resource_allocation_tasks: 5
   system_optimization_tasks: 5
   easy_tasks: 7
-  intermediate_tasks: 8
+  intermediate_tasks: 9
   hard_tasks: 13
+  medium_tasks: 1
   extreme_tasks: 1
 
 constraints:

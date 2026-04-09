@@ -25,6 +25,16 @@ TASK_VARIANTS = {
         "domain": "warehouse",
         "version": "1.0",
     },
+    "warehouse_medium": {
+        "name": "Warehouse Medium",
+        "description": "3 warehouses, variable demand, basic distribution",
+        "difficulty": "medium",
+        "mode": "normal",
+        "num_warehouses": 3,
+        "max_steps": 60,
+        "domain": "warehouse",
+        "version": "1.0",
+    },
     "warehouse_intermediate": {
         "name": "Warehouse Intermediate",
         "description": "3 warehouses, seasonal demand, cross-warehouse transfers",
