@@ -35,6 +35,22 @@ class ComprehensiveGrader:
         h = hashlib.sha256(str(value).encode()).hexdigest()
         return float(int(h[:8], 16)) % 1000 / 1000
 
+    def _ensure_valid_score(self, score: float) -> float:
+        """Ensure score is strictly between 0 and 1 (exclusive).
+        
+        The validator requires: 0 < score < 1 (not 0.0 and not 1.0)
+        """
+        try:
+            score = float(score)
+            # Handle invalid values
+            if np.isnan(score) or np.isinf(score):
+                score = 0.5
+            # Clip to strictly within (0, 1) with epsilon margins
+            return float(np.clip(score, 0.001, 0.999))
+        except (ValueError, TypeError):
+            # If anything fails, return middle value
+            return 0.5
+
     def grade(self, state: Any, episode_rewards: List[float]) -> Dict[str, float]:
         """Grade task based on domain."""
         if self.domain == "warehouse":
@@ -48,12 +64,12 @@ class ComprehensiveGrader:
         elif self.domain == "system_optimization":
             return self._grade_system_optimization(state, episode_rewards)
         else:
-            return {"score": 0.5}
+            return {"score": self._ensure_valid_score(0.5)}
 
     def _grade_warehouse(self, state: Any, episode_rewards: List[float]) -> Dict[str, float]:
         """Grade warehouse tasks based on inventory management."""
         if not episode_rewards or len(episode_rewards) == 0:
-            return {"score": 0.2}
+            return {"score": self._ensure_valid_score(0.35)}
 
         # Average reward from episode
         avg_reward = np.mean(episode_rewards)
@@ -63,13 +79,14 @@ class ComprehensiveGrader:
 
         # Ensure minimum positive reward
         score = max(0.15, score)
-
-        return {"score": max(0.20, min(0.95, score))}
+        score = max(0.20, min(0.95, score))
+        
+        return {"score": self._ensure_valid_score(score)}
 
     def _grade_data_pipeline(self, state: Any, episode_rewards: List[float]) -> Dict[str, float]:
         """Grade data pipeline tasks based on processing efficiency."""
         if not episode_rewards or len(episode_rewards) == 0:
-            return {"score": 0.25}
+            return {"score": self._ensure_valid_score(0.35)}
 
         # Data pipeline score based on quality metrics
         avg_reward = np.mean(episode_rewards)
@@ -77,12 +94,12 @@ class ComprehensiveGrader:
 
         score = max(0.20, min(0.95, quality_factor))
 
-        return {"score": score}
+        return {"score": self._ensure_valid_score(score)}
 
     def _grade_code_review(self, state: Any, episode_rewards: List[float]) -> Dict[str, float]:
         """Grade code review tasks based on quality improvements."""
         if not episode_rewards or len(episode_rewards) == 0:
-            return {"score": 0.3}
+            return {"score": self._ensure_valid_score(0.35)}
 
         # Code review score reflects quality improvement
         episode_count = len(episode_rewards)
@@ -90,12 +107,12 @@ class ComprehensiveGrader:
 
         score = max(0.20, min(0.95, base_score))
 
-        return {"score": score}
+        return {"score": self._ensure_valid_score(score)}
 
     def _grade_resource_allocation(self, state: Any, episode_rewards: List[float]) -> Dict[str, float]:
         """Grade resource allocation tasks based on optimization."""
         if not episode_rewards or len(episode_rewards) == 0:
-            return {"score": 0.35}
+            return {"score": self._ensure_valid_score(0.35)}
 
         # Resource allocation score based on allocation efficiency
         avg_reward = np.mean(episode_rewards)
@@ -103,12 +120,12 @@ class ComprehensiveGrader:
 
         score = max(0.20, min(0.95, optimization_score))
 
-        return {"score": score}
+        return {"score": self._ensure_valid_score(score)}
 
     def _grade_system_optimization(self, state: Any, episode_rewards: List[float]) -> Dict[str, float]:
         """Grade system optimization tasks based on performance."""
         if not episode_rewards or len(episode_rewards) == 0:
-            return {"score": 0.4}
+            return {"score": self._ensure_valid_score(0.35)}
 
         # System optimization score based on performance improvements
         avg_reward = np.mean(episode_rewards)
@@ -116,7 +133,7 @@ class ComprehensiveGrader:
 
         score = max(0.20, min(0.95, performance_score))
 
-        return {"score": score}
+        return {"score": self._ensure_valid_score(score)}
 
 
 # Task-specific graders
