@@ -1,3 +1,149 @@
+spec_version: 1
+name: lunar-comprehensive-benchmark
+version: "2.0"
+description: >
+  Lunar: 32-task multi-domain RL benchmark for AI agent training.
+  Warehouse optimization, data pipelines, code review, resource allocation,
+  and system optimization with deterministic graders.
+
+type: rl-environment
+runtime: docker
+app: app.py
+port: 7860
+
+# Benchmark domains with task counts
+benchmarks:
+  - name: warehouse
+    description: "Inventory management across multiple warehouses with optimization"
+    tasks: 6
+    grader: "ComprehensiveGrader"
+  - name: data_pipeline
+    description: "Data ingestion, cleaning, validation, transformation, and export"
+    tasks: 8
+    grader: "ComprehensiveGrader"
+  - name: code_review
+    description: "Code style, performance, security, maintainability, and testing"
+    tasks: 8
+    grader: "ComprehensiveGrader"
+  - name: resource_allocation
+    description: "Budget management, task scheduling, and capacity planning"
+    tasks: 5
+    grader: "ComprehensiveGrader"
+  - name: system_optimization
+    description: "Query optimization, memory usage, throughput, and latency"
+    tasks: 5
+    grader: "ComprehensiveGrader"
+
+total_tasks: 32
+total_graders: 1
+
+# Reward specification
+reward_bounds: [0.1, 1.0]
+reward_distribution: "partial_credit"
+
+# Task specifications (for validator parsing)
+tasks:
+  warehouse:
+    - id: warehouse_novice
+      name: "Warehouse Novice"
+      grader: ComprehensiveGrader
+    - id: warehouse_easy
+      name: "Warehouse Easy"
+      grader: ComprehensiveGrader
+    - id: warehouse_medium
+      name: "Warehouse Medium"
+      grader: ComprehensiveGrader
+    - id: warehouse_intermediate
+      name: "Warehouse Intermediate"
+      grader: ComprehensiveGrader
+    - id: warehouse_hard
+      name: "Warehouse Hard"
+      grader: ComprehensiveGrader
+    - id: warehouse_extreme
+      name: "Warehouse Extreme"
+      grader: ComprehensiveGrader
+  data_pipeline:
+    - id: data_ingestion_simple
+      name: "Data Ingestion Simple"
+      grader: ComprehensiveGrader
+    - id: data_ingestion_complex
+      name: "Data Ingestion Complex"
+      grader: ComprehensiveGrader
+    - id: data_cleaning_basic
+      name: "Data Cleaning Basic"
+      grader: ComprehensiveGrader
+    - id: data_cleaning_advanced
+      name: "Data Cleaning Advanced"
+      grader: ComprehensiveGrader
+    - id: data_validation_schema
+      name: "Data Validation Schema"
+      grader: ComprehensiveGrader
+    - id: data_validation_quality
+      name: "Data Validation Quality"
+      grader: ComprehensiveGrader
+    - id: data_transformation_etl
+      name: "Data Transformation ETL"
+      grader: ComprehensiveGrader
+    - id: data_export_format
+      name: "Data Export Format"
+      grader: ComprehensiveGrader
+  code_review:
+    - id: code_style_compliance
+      name: "Code Style Compliance"
+      grader: ComprehensiveGrader
+    - id: code_performance_optimization
+      name: "Code Performance Optimization"
+      grader: ComprehensiveGrader
+    - id: code_security_vulnerabilities
+      name: "Code Security Vulnerabilities"
+      grader: ComprehensiveGrader
+    - id: code_maintainability_metrics
+      name: "Code Maintainability Metrics"
+      grader: ComprehensiveGrader
+    - id: code_refactoring_simple
+      name: "Code Refactoring Simple"
+      grader: ComprehensiveGrader
+    - id: code_refactoring_complex
+      name: "Code Refactoring Complex"
+      grader: ComprehensiveGrader
+    - id: code_testing_coverage
+      name: "Code Testing Coverage"
+      grader: ComprehensiveGrader
+    - id: code_integration_testing
+      name: "Code Integration Testing"
+      grader: ComprehensiveGrader
+  resource_allocation:
+    - id: resource_budget_simple
+      name: "Resource Budget Simple"
+      grader: ComprehensiveGrader
+    - id: resource_budget_complex
+      name: "Resource Budget Complex"
+      grader: ComprehensiveGrader
+    - id: resource_scheduling_tasks
+      name: "Resource Scheduling Tasks"
+      grader: ComprehensiveGrader
+    - id: resource_scheduling_teams
+      name: "Resource Scheduling Teams"
+      grader: ComprehensiveGrader
+    - id: resource_capacity_planning
+      name: "Resource Capacity Planning"
+      grader: ComprehensiveGrader
+  system_optimization:
+    - id: optimization_query_basic
+      name: "Optimization Query Basic"
+      grader: ComprehensiveGrader
+    - id: optimization_query_advanced
+      name: "Optimization Query Advanced"
+      grader: ComprehensiveGrader
+    - id: optimization_memory_usage
+      name: "Optimization Memory Usage"
+      grader: ComprehensiveGrader
+    - id: optimization_throughput
+      name: "Optimization Throughput"
+      grader: ComprehensiveGrader
+    - id: optimization_latency
+      name: "Optimization Latency"
+      grader: ComprehensiveGrader
 name: lunar-comprehensive-benchmark
 spec_version: 1
 version: "2.0"
