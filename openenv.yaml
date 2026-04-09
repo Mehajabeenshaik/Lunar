@@ -22,6 +22,11 @@ features:
 domains:
   - warehouse_management
 
+graders:
+  - warehouse_easy
+  - warehouse_medium
+  - warehouse_hard
+
 tasks:
   # Domain: Warehouse Management (3 production-ready tasks)
   - id: warehouse_easy
@@ -30,6 +35,8 @@ tasks:
     difficulty: easy
     domain: warehouse_management
     max_steps: 30
+    has_grader: true
+    grader_type: "EasyTaskGrader"
     observation_fields:
       - warehouse_levels
       - demand_forecast
@@ -44,6 +51,8 @@ tasks:
     difficulty: medium
     domain: warehouse_management
     max_steps: 60
+    has_grader: true
+    grader_type: "MediumTaskGrader"
     observation_fields:
       - warehouse_levels
       - demand_forecast
@@ -59,6 +68,8 @@ tasks:
     difficulty: hard
     domain: warehouse_management
     max_steps: 90
+    has_grader: true
+    grader_type: "HardTaskGrader"
     observation_fields:
       - warehouse_levels
       - demand_forecast

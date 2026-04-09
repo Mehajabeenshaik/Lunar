@@ -46,7 +46,23 @@ class ResetResponse(BaseModel):
 
 
 class StepRequest(BaseModel):
-    action: Dict[str, Any] = Field(..., description="Action to execute in the environment")
+    """Flexible step request supporting multiple formats:
+    1. {\"action\": {\"reorder_quantities\": [...], \"transfers\": [...]}}
+    2. {\"reorder_quantities\": [...], \"transfers\": [...]}
+    """
+    action: Optional[Dict[str, Any]] = Field(None, description="Action to execute in the environment")
+    reorder_quantities: Optional[list] = Field(None, description="Reorder quantities (if not in action)")
+    transfers: Optional[list] = Field(None, description="Transfers (if not in action)")
+    
+    def get_action(self) -> Dict[str, Any]:
+        """Extract action dict from either format."""
+        if self.action is not None:
+            return self.action
+        elif self.reorder_quantities is not None or self.transfers is not None:
+            return {
+                "reorder_quantities": self.reorder_quantities or [],
+                "transfers": self.transfers or []}
+        raise ValueError("No action provided")
 
 
 class StepResponse(BaseModel):
@@ -155,7 +171,10 @@ async def reset(
 
 @app.post("/step", response_model=StepResponse)
 async def step(req: StepRequest, session_id: str = Query(...)):
-    """Execute one environment step."""
+    """Execute one environment step. Accepts action in either format:
+    - {\"action\": {\"reorder_quantities\": [...], \"transfers\": [...]}}
+    - {\"reorder_quantities\": [...], \"transfers\": [...]}
+    """
     
     if not session_id:
         raise HTTPException(status_code=400, detail="session_id required")
@@ -166,7 +185,8 @@ async def step(req: StepRequest, session_id: str = Query(...)):
         raise HTTPException(status_code=400, detail=str(e))
     
     try:
-        action = Action(**req.action)
+        action_dict = req.get_action()
+        action = Action(**action_dict)
     except (ValueError, ValidationError) as e:
         error_msg = f"Invalid action: {str(e)}"
         raise HTTPException(status_code=400, detail=error_msg)
