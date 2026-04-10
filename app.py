@@ -130,7 +130,8 @@ async def get_manifest():
         "description": "Meta Content Moderation Agent Environment - 30 Tasks Enhanced",
         "type": "rl-environment",
         "tasks": 30,
-        "reward_range": [0.0, 1.0],
+        "reward_range": [0.001, 0.999],
+        "reward_range_description": "All task scores strictly between 0 and 1 (exclusive bounds)",
         "observation_space": {
             "type": "json",
             "description": "JSON object with post content and task instructions"
@@ -320,7 +321,8 @@ async def get_stats():
         "environment": "ContentModerationEnv",
         "tasks_available": 30,
         "tasks_completed": len([s for s in sessions.sessions.values() if s.get("done")]),
-        "reward_range": [0.0, 1.0],
+        "reward_range": [0.001, 0.999],
+        "reward_range_description": "All task scores strictly between 0 and 1 (exclusive bounds)",
         "domains": [
             "domain_1_basic_classification",
             "domain_2_context_aware_moderation",
