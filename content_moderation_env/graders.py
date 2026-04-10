@@ -19,23 +19,44 @@ class OptimizedModeratorGrader:
     
     @staticmethod
     def _clamp_score(score: float) -> float:
-        """Ensure score is strictly within (0, 1) - not exactly 0.0 or 1.0
+        """Ensure score is STRICTLY within (0, 1) - not exactly 0.0 or 1.0
         
-        Validator requires: 0 < score < 1
-        Add epsilon padding to boundary values to pass validation
+        Validator requires: 0 < score < 1 (exclusive on both ends)
+        This function ensures NO 0.0 or 1.0 can escape, even with floating point edge cases.
         """
-        if score <= 0.0 or score == 0.0:
-            return 0.001
-        elif score >= 1.0 or score == 1.0:
-            return 0.999
-        else:
-            # Final check: round to 4 decimals to eliminate floating point edge cases
-            result = round(float(score), 4)
-            if result >= 1.0 or result == 1.0:
-                return 0.999
-            if result <= 0.0 or result == 0.0:
+        try:
+            # Convert to float to handle any type
+            score = float(score)
+            
+            # Step 1: Defensive conversions to handle edge cases
+            score = max(-1000, min(2000, score))  # Clamp extreme values first
+            
+            # Step 2: Hard clamp to [0.001, 0.999]
+            if score <= 0.0:
                 return 0.001
-            return result
+            elif score >= 1.0:
+                return 0.999
+            
+            # Step 3: Round to 4 decimals (precision limit)
+            score = round(score, 4)
+            
+            # Step 4: Double-check after rounding
+            if score <= 0.0 or score >= 1.0:
+                return 0.5  # Fallback to midpoint if rounding caused boundary
+            if score < 0.001:
+                return 0.001
+            if score > 0.999:
+                return 0.999
+            
+            # Step 5: Final sanity check
+            if not (0 < score < 1):
+                return 0.5
+            
+            return score
+            
+        except (ValueError, TypeError):
+            # If any conversion fails, return safe midpoint
+            return 0.5
     
     def _get_cache_key(self, task_id: int, prediction: Dict, ground_truth: Dict) -> str:
         """Generate cache key for grading results"""

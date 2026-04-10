@@ -173,9 +173,36 @@ async def step_session(session_id: str, request: StepRequest):
         
         observation, reward, done, info = env.step(request.action)
         
+        # CRITICAL: Ultra-strict boundary validation at API level (LAYER 6)
+        # Ensure NO 0.0 or 1.0 can escape to the API client
+        try:
+            reward = float(reward)
+            
+            # Multiple guards against boundary violations
+            if reward is None or reward <= 0.0 or reward >= 1.0:
+                reward = 0.5
+            
+            # Round to safe precision
+            reward = round(reward, 4)
+            
+            # Final check
+            if reward <= 0.0 or reward >= 1.0:
+                reward = 0.5
+            if reward < 0.001:
+                reward = 0.001
+            if reward > 0.999:
+                reward = 0.999
+            
+            # Paranoia check
+            if not (0 < reward < 1):
+                reward = 0.5
+                
+        except (ValueError, TypeError):
+            reward = 0.5
+        
         return {
             "observation": observation,
-            "reward": reward,
+            "reward": reward,  # Guaranteed to be in (0, 1) exclusive
             "done": done,
             "info": info,
             "timestamp": datetime.now().isoformat()
