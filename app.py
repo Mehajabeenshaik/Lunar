@@ -307,6 +307,28 @@ async def get_state():
     }
 
 
+def run_server():
+    """Entry point for [project.scripts] server command"""
+    import uvicorn
+    port = int(os.getenv("PORT", 7860))
+    host = os.getenv("HOST", "0.0.0.0")
+    
+    print(f"[DEBUG] Starting uvicorn on {host}:{port}...")
+    print(f"[DEBUG] Open http://localhost:{port}/docs for API documentation")
+    
+    try:
+        uvicorn.run(
+            app,
+            host=host,
+            port=port,
+            log_level="info"
+        )
+    except Exception as e:
+        print(f"[ERROR] Failed to start server: {e}")
+        traceback.print_exc()
+        sys.exit(1)
+
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 7860))
