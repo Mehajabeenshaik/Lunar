@@ -101,16 +101,21 @@ async def get_manifest():
     """Return OpenEnv manifest"""
     return {
         "name": "content-moderation-benchmark",
-        "version": "1.0.0",
-        "spec_version": 1,
-        "description": "Meta Content Moderation Agent Environment",
+        "version": "2.0",
+        "spec_version": 2,
+        "description": "Meta Content Moderation Agent Environment - 9 Tasks Enhanced",
         "type": "rl-environment",
-        "tasks": 3,
+        "tasks": 9,
         "reward_range": [0.0, 1.0],
         "observation_space": {
             "type": "json",
             "description": "JSON object with post content and task instructions"
-        }
+        },
+        "domains": [
+            "domain_1_basic_classification",
+            "domain_2_context_aware_moderation",
+            "domain_3_edge_cases"
+        ]
     }
 
 
@@ -127,8 +132,8 @@ async def start_session(request: StartSessionRequest):
         session_id and initial observation
     """
     try:
-        if request.task_id not in [1, 2, 3]:
-            raise ValueError("task_id must be 1, 2, or 3")
+        if request.task_id not in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
+            raise ValueError("task_id must be 1-9")
         
         session_id = sessions.create_session(
             task_id=request.task_id,
@@ -210,29 +215,81 @@ async def delete_session(session_id: str):
 
 @app.get("/tasks")
 async def list_tasks():
-    """List all available tasks"""
+    """List all available 9 tasks"""
     return {
+        "total_tasks": 9,
         "tasks": [
             {
                 "id": 1,
-                "name": "Post Classification",
+                "domain": "domain_1_basic_classification",
+                "name": "Post Classification (Easy)",
                 "description": "Classify posts as Safe, Hate Speech, Spam, or Misinformation",
                 "difficulty": "easy",
                 "reward_metric": "Exact match (1.0 correct, 0.0 wrong)"
             },
             {
                 "id": 2,
-                "name": "Classification with Reasoning",
+                "domain": "domain_1_basic_classification",
+                "name": "Classification with Reasoning (Medium)",
                 "description": "Classify posts with reasoning and severity (1-5)",
                 "difficulty": "medium",
                 "reward_metric": "Composite (50% category, 50% severity)"
             },
             {
                 "id": 3,
-                "name": "Full Moderation Decision",
+                "domain": "domain_1_basic_classification",
+                "name": "Full Moderation Decision (Hard)",
                 "description": "Complete moderation: classify, severity, action, explanation",
                 "difficulty": "hard",
                 "reward_metric": "Weighted (25% each: category, severity, action, explanation)"
+            },
+            {
+                "id": 4,
+                "domain": "domain_2_context_aware_moderation",
+                "name": "Author History Context (Easy)",
+                "description": "Use author history and reputation to inform moderation decisions",
+                "difficulty": "easy",
+                "reward_metric": "Accuracy considering author reputation"
+            },
+            {
+                "id": 5,
+                "domain": "domain_2_context_aware_moderation",
+                "name": "Trending Topic Context (Medium)",
+                "description": "Consider trending topics and current events in moderation",
+                "difficulty": "medium",
+                "reward_metric": "Contextual accuracy with trending awareness"
+            },
+            {
+                "id": 6,
+                "domain": "domain_2_context_aware_moderation",
+                "name": "Appeal Case Handling (Hard)",
+                "description": "Review flagged content appeals with full context",
+                "difficulty": "hard",
+                "reward_metric": "Appeal resolution accuracy"
+            },
+            {
+                "id": 7,
+                "domain": "domain_3_edge_cases",
+                "name": "False Positive Detection (Easy)",
+                "description": "Identify incorrectly flagged content",
+                "difficulty": "easy",
+                "reward_metric": "False positive detection accuracy"
+            },
+            {
+                "id": 8,
+                "domain": "domain_3_edge_cases",
+                "name": "Sarcasm & Irony Detection (Medium)",
+                "description": "Detect sarcasm and irony to avoid false positives",
+                "difficulty": "medium",
+                "reward_metric": "Tone analysis accuracy"
+            },
+            {
+                "id": 9,
+                "domain": "domain_3_edge_cases",
+                "name": "Coordinated Inauthentic Behavior (Hard)",
+                "description": "Detect coordinated inauthentic behavior networks",
+                "difficulty": "hard",
+                "reward_metric": "Behavior pattern detection accuracy"
             }
         ]
     }
@@ -244,13 +301,19 @@ async def get_stats():
     return {
         "active_sessions": len(sessions.sessions),
         "environment": "ContentModerationEnv",
-        "tasks_available": 3,
+        "tasks_available": 9,
+        "tasks_completed": len([s for s in sessions.sessions.values() if s.get("done")]),
         "reward_range": [0.0, 1.0],
         "domains": [
-            "social_media_moderation",
-            "content_safety",
-            "platform_policy_enforcement"
+            "domain_1_basic_classification",
+            "domain_2_context_aware_moderation",
+            "domain_3_edge_cases"
         ],
+        "task_structure": {
+            "domain_1_basic_classification": 3,
+            "domain_2_context_aware_moderation": 3,
+            "domain_3_edge_cases": 3
+        },
         "timestamp": datetime.now().isoformat()
     }
 
@@ -307,12 +370,14 @@ async def get_state():
     """
     return {
         "name": "content-moderation-benchmark",
-        "version": "1.0.0",
-        "tasks_available": 3,
+        "version": "2.0",
+        "tasks_available": 9,
         "active_sessions": len(sessions.sessions),
         "reward_range": [0.0, 1.0],
         "environment": "ContentModerationEnv",
-        "status": "ready"
+        "status": "ready",
+        "domains": 3,
+        "tasks_per_domain": 3
     }
 
 
