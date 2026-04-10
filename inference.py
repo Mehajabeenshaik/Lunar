@@ -164,22 +164,19 @@ def log_start(task_name: str, task_id: int) -> None:
 
 def log_step(step_num: int, action: str, reward: float, done: bool, error: str = None, metrics: Optional[PerformanceMetrics] = None) -> None:
     """Emit [STEP] log line with optional metrics"""
-    error_str = f'"{error}"' if error else "null"
-    done_str = "true" if done else "false"
-    metrics_str = f" tokens={metrics.tokens_used}" if metrics else ""
+    action_str = str(action)[:100].replace('\n', ' ')  # Truncate and sanitize
+    error_str = f"{error}" if error else "null"
     print(
-        f"[STEP] step={step_num} action={action} reward={reward:.2f} done={done_str} error={error_str}{metrics_str}",
+        f"[STEP] step={step_num} action={action_str!r} reward={reward:.2f} done={done} error={error_str}",
         flush=True
     )
 
 
 def log_end(success: bool, steps_taken: int, final_score: float, rewards: List[float], metrics: Optional[PerformanceMetrics] = None) -> None:
     """Emit [END] log line with performance metrics"""
-    success_str = "true" if success else "false"
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
-    metrics_str = f" duration={metrics.duration:.1f}s tokens={metrics.tokens_used}" if metrics else ""
     print(
-        f"[END] success={success_str} steps={steps_taken} score={final_score:.2f} rewards={rewards_str}{metrics_str}",
+        f"[END] success={success} steps={steps_taken} score={final_score:.2f} rewards={rewards_str}",
         flush=True
     )
 
