@@ -71,6 +71,15 @@ sessions = SessionState()
 
 # ============ API Endpoints ============
 
+@app.get("/health")
+async def health():
+    """Health check endpoint for validator"""
+    return {
+        "status": "ok",
+        "timestamp": datetime.now().isoformat()
+    }
+
+
 @app.get("/")
 async def root():
     """Health check and welcome endpoint"""
