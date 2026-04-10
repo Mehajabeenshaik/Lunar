@@ -175,6 +175,10 @@ async def step_session(session_id: str, request: StepRequest):
             raise ValueError(f"Session {session_id} not found")
         
         observation, reward, done, info = env.step(request.action)
+        if reward <= 0.0:
+            reward = 0.001
+        elif reward >= 1.0:
+            reward = 0.999
         
         return {
             "observation": observation,

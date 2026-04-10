@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Content Moderation Benchmark - OPTIMIZED Inference Script (9 Tasks + Parallel Execution)
+Content Moderation Benchmark - OPTIMIZED Inference Script (30 Tasks + Parallel Execution)
 Baseline agent with performance optimizations, caching, and parallel task execution
 
 OPTIMIZATIONS:
@@ -55,7 +55,20 @@ ENVIRONMENT_HOST = os.getenv("ENVIRONMENT_HOST", "http://localhost:7860")
 MAX_STEPS = 8
 MAX_RETRIES = 3
 ENABLE_PARALLEL = True
-MAX_WORKERS = 3  # Parallel tasks (domains don't conflict)
+MAX_WORKERS = 3  # Parallel workers across task groups
+
+
+def clamp_score(value: Any) -> float:
+    """Ensure score is strictly within (0, 1) and safe for validator parsing."""
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        return 0.5
+    if score <= 0.0:
+        return 0.001
+    if score >= 1.0:
+        return 0.999
+    return score
 
 # ============ PERFORMANCE METRICS ============
 
@@ -164,19 +177,22 @@ def log_start(task_name: str, task_id: int) -> None:
 
 def log_step(step_num: int, action: str, reward: float, done: bool, error: str = None, metrics: Optional[PerformanceMetrics] = None) -> None:
     """Emit [STEP] log line with optional metrics"""
+    reward = clamp_score(reward)
     action_str = str(action)[:100].replace('\n', ' ')  # Truncate and sanitize
     error_str = f"{error}" if error else "null"
     print(
-        f"[STEP] step={step_num} action={action_str!r} reward={reward:.2f} done={done} error={error_str}",
+        f"[STEP] step={step_num} action={action_str!r} reward={reward:.3f} done={done} error={error_str}",
         flush=True
     )
 
 
 def log_end(success: bool, steps_taken: int, final_score: float, rewards: List[float], metrics: Optional[PerformanceMetrics] = None) -> None:
     """Emit [END] log line with performance metrics"""
-    rewards_str = ",".join(f"{r:.2f}" for r in rewards)
+    final_score = clamp_score(final_score)
+    rewards = [clamp_score(r) for r in rewards]
+    rewards_str = ",".join(f"{r:.3f}" for r in rewards)
     print(
-        f"[END] success={success} steps={steps_taken} score={final_score:.2f} rewards={rewards_str}",
+        f"[END] success={success} steps={steps_taken} score={final_score:.3f} rewards={rewards_str}",
         flush=True
     )
 
@@ -187,11 +203,7 @@ class OptimizedContentModerationAgent:
     """Agent with inference optimizations: caching, batching, parallel execution"""
     
     def __init__(self):
-        """Initialize OpenAI client and connection pool"""
-        self.client = OpenAI(
-            api_key=API_KEY,
-            base_url=API_BASE_URL
-        )
+        """Initialize connection pool and caches."""
         self.http_pool = HTTPClientPool()
         self.prompt_cache = PromptCache()
         self.session_id = None
@@ -226,7 +238,7 @@ class OptimizedContentModerationAgent:
             data = response.json()
             return (
                 data.get("observation", {}),
-                data.get("reward", 0.0),
+                clamp_score(data.get("reward", 0.5)),
                 data.get("done", False),
                 data.get("info", {})
             )
@@ -258,7 +270,7 @@ class OptimizedContentModerationAgent:
         if task_id == 1:
             prompt, cached = self.prompt_cache.get_prompt(task_id, text=post_text)
             
-            response = self.client.chat.completions.create(
+            response = client.chat.completions.create(
                 model=MODEL_NAME,
                 max_tokens=50,  # Reduced from default
                 messages=[{"role": "user", "content": prompt}]
@@ -274,7 +286,7 @@ class OptimizedContentModerationAgent:
         elif task_id == 2:
             prompt, cached = self.prompt_cache.get_prompt(task_id, text=post_text)
             
-            response = self.client.chat.completions.create(
+            response = client.chat.completions.create(
                 model=MODEL_NAME,
                 max_tokens=80,
                 messages=[{"role": "user", "content": prompt}]
@@ -293,7 +305,7 @@ class OptimizedContentModerationAgent:
         elif task_id == 3:
             prompt, cached = self.prompt_cache.get_prompt(task_id, text=post_text)
             
-            response = self.client.chat.completions.create(
+            response = client.chat.completions.create(
                 model=MODEL_NAME,
                 max_tokens=150,
                 messages=[{"role": "user", "content": prompt}]
@@ -314,7 +326,7 @@ class OptimizedContentModerationAgent:
         # Tasks 4-9 (Domain 2 & 3) - simplified but effective
         elif task_id in [4, 5, 6, 7, 8, 9]:
             # Standard approach for all domain 2 & 3 tasks
-            response = self.client.chat.completions.create(
+            response = client.chat.completions.create(
                 model=MODEL_NAME,
                 max_tokens=120,
                 messages=[{"role": "user", "content": f"Moderate content. Post: \"{post_text}\". Respond in JSON."}]
@@ -337,14 +349,21 @@ class OptimizedContentModerationAgent:
             task_names = {
                 1: "Classification", 2: "Classification+Reasoning", 3: "FullModeration",
                 4: "AuthorHistory", 5: "TrendingTopic", 6: "AppealCase",
-                7: "FalsePositive", 8: "SarcasmDetection", 9: "CoordinatedBehavior"
+                7: "FalsePositive", 8: "SarcasmDetection", 9: "CoordinatedBehavior",
+                10: "ImageSafety", 11: "VisualToxicity", 12: "MultimodalContext",
+                13: "DeepfakeDetection", 14: "SceneSafety", 15: "AuthorCredibility",
+                16: "BotDetection", 17: "InauthenticPatterns", 18: "MisinformationSpread",
+                19: "AppealFairness", 20: "UserTrust", 21: "CampaignDetection",
+                22: "ViralMisinformation", 23: "HarassmentNetwork", 24: "ContextCollapse",
+                25: "CrossPlatformConsistency", 26: "SatireVsHate", 27: "CulturalSensitivity",
+                28: "PolicyEvolution", 29: "MultiLanguageModeration", 30: "Accessibility"
             }
             log_start(task_names.get(task_id, f"Task{task_id}"), task_id)
             
             observation = self.start_session(task_id)
             step_count = 0
             success = False
-            final_reward = 0.0
+            final_reward = 0.001
             
             for step_num in range(1, MAX_STEPS + 1):
                 step_count = step_num
@@ -357,6 +376,7 @@ class OptimizedContentModerationAgent:
                     action_str = json.dumps(action)[:80]
                     observation, reward, done, info = self.step_environment(action)
                     
+                    reward = clamp_score(reward)
                     log_step(step_num, action_str, reward, done, metrics=metrics)
                     self.episode_rewards.append(reward)
                     final_reward = reward
@@ -366,11 +386,11 @@ class OptimizedContentModerationAgent:
                         break
                 
                 except Exception as e:
-                    log_step(step_num, "error", 0.0, True, str(e), metrics)
+                    log_step(step_num, "error", 0.001, True, str(e), metrics)
                     break
             
             summary = self.get_session_summary()
-            final_score = summary.get("average_reward", final_reward)
+            final_score = clamp_score(summary.get("average_reward", final_reward))
             
             metrics.end_time = time.time()
             log_end(success, step_count, final_score, self.episode_rewards, metrics)
@@ -381,18 +401,18 @@ class OptimizedContentModerationAgent:
         except Exception as e:
             print(f"[ERROR] Task {task_id} failed: {e}", file=sys.stderr)
             metrics.end_time = time.time()
-            log_end(False, 0, 0.0, [], metrics)
+            log_end(False, 0, 0.001, [0.001], metrics)
             self.task_metrics.append(metrics)
-            return False, 0.0, metrics
+            return False, 0.001, metrics
 
 
 # ============ PARALLEL EXECUTION ============
 
 def run_all_tasks_parallel(speed_factor: float = 1.0) -> Tuple[Dict, float, List[PerformanceMetrics]]:
-    """Run all 9 tasks with parallel domain execution - 3x faster than sequential"""
+    """Run all 30 tasks with parallel group execution."""
     
     print("\n" + "="*60, file=sys.stderr)
-    print("LUNAR Optimized Baseline - 9 Tasks with Parallel Execution", file=sys.stderr)
+    print("LUNAR Optimized Baseline - 30 Tasks with Parallel Execution", file=sys.stderr)
     print(f"Speed Factor: {speed_factor}x | Parallel Workers: {MAX_WORKERS}", file=sys.stderr)
     print("="*60 + "\n", file=sys.stderr)
     
@@ -402,12 +422,11 @@ def run_all_tasks_parallel(speed_factor: float = 1.0) -> Tuple[Dict, float, List
     start_time = time.time()
     
     if ENABLE_PARALLEL:
-        # Parallel execution: 3 domains in parallel
-        # Domain 1 (Tasks 1-3), Domain 2 (Tasks 4-6), Domain 3 (Tasks 7-9)
+        # Parallel execution: 3 balanced groups
         domain_tasks = [
-            [1, 2, 3],  # Domain 1: Basic Classification
-            [4, 5, 6],  # Domain 2: Context-Aware
-            [7, 8, 9]   # Domain 3: Edge Cases
+            list(range(1, 11)),
+            list(range(11, 21)),
+            list(range(21, 31))
         ]
         
         def run_domain(tasks):
@@ -425,7 +444,7 @@ def run_all_tasks_parallel(speed_factor: float = 1.0) -> Tuple[Dict, float, List
                     print(f"[ERROR] Domain task {task_id} failed: {e}", file=sys.stderr)
                     domain_results[task_id] = {
                         "success": False,
-                        "score": 0.0,
+                        "score": 0.001,
                         "metrics": PerformanceMetrics(task_id=task_id, start_time=time.time())
                     }
             return domain_results
@@ -456,7 +475,7 @@ def run_all_tasks_parallel(speed_factor: float = 1.0) -> Tuple[Dict, float, List
                 print(f"[ERROR] Task {task_id} failed: {e}", file=sys.stderr)
                 task_results[task_id] = {
                     "success": False,
-                    "score": 0.0,
+                    "score": 0.001,
                     "metrics": PerformanceMetrics(task_id=task_id, start_time=time.time())
                 }
     
@@ -470,14 +489,14 @@ def run_all_tasks_parallel(speed_factor: float = 1.0) -> Tuple[Dict, float, List
     print("OPTIMIZED BASELINE SCORES (30 TASKS)", file=sys.stderr)
     print("="*60, file=sys.stderr)
     for task_id in range(1, 31):
-        result = task_results.get(task_id, {"score": 0.0, "success": False, "metrics": None})
+        result = task_results.get(task_id, {"score": 0.001, "success": False, "metrics": None})
         metrics = result.get("metrics")
         if metrics:
-            print(f"Task {task_id}: {result['score']:.2f} ({metrics.duration:.1f}s, {metrics.tokens_used} tokens)", file=sys.stderr)
+            print(f"Task {task_id}: {clamp_score(result['score']):.3f} ({metrics.duration:.1f}s, {metrics.tokens_used} tokens)", file=sys.stderr)
         else:
-            print(f"Task {task_id}: {result['score']:.2f} ({'✓' if result['success'] else '✗'})", file=sys.stderr)
+            print(f"Task {task_id}: {clamp_score(result['score']):.3f} ({'✓' if result['success'] else '✗'})", file=sys.stderr)
     
-    print(f"\nAverage Score: {avg_score:.2f}", file=sys.stderr)
+    print(f"\nAverage Score: {clamp_score(avg_score):.3f}", file=sys.stderr)
     print(f"Total Time: {total_time:.1f}s (Target: <25min)", file=sys.stderr)
     print(f"Total Tokens: {total_tokens} (Optimized: ~40% reduction)", file=sys.stderr)
     print(f"Avg Efficiency: {total_tokens / max(total_time, 0.1):.0f} tokens/sec", file=sys.stderr)
@@ -489,7 +508,7 @@ def run_all_tasks_parallel(speed_factor: float = 1.0) -> Tuple[Dict, float, List
 # ============ MAIN EXECUTION ============
 
 def main():
-    """Run optimized baseline agent on all 9 tasks"""
+    """Run optimized baseline agent on all 30 tasks"""
     
     try:
         import requests
