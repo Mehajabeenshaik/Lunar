@@ -144,11 +144,12 @@ class ContentModerationEnv:
         }
         
         try:
-            grader = ModeratorGrader.get_grader_for_task(self.task_id)
-            reward = grader(action, ground_truth)
+            grader = ModeratorGrader()  # Create instance to access grade() method
+            reward = grader.grade(self.task_id, action, ground_truth)
         except Exception as e:
             # Graceful degradation: if grading fails, give partial credit
-            reward = 0.5 if any(action.values()) else 0.0
+            # Must clamp to (0, 1) range - not exactly 0 or 1
+            reward = 0.5 if any(action.values()) else 0.001
         
         self.rewards_history.append(reward)
         

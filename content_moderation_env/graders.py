@@ -17,6 +17,20 @@ class OptimizedModeratorGrader:
         self.cache_hits = 0
         self.cache_misses = 0
     
+    @staticmethod
+    def _clamp_score(score: float) -> float:
+        """Ensure score is strictly within (0, 1) - not exactly 0.0 or 1.0
+        
+        Validator requires: 0 < score < 1
+        Add epsilon padding to boundary values to pass validation
+        """
+        if score <= 0.0:
+            return 0.001
+        elif score >= 1.0:
+            return 0.999
+        else:
+            return score
+    
     def _get_cache_key(self, task_id: int, prediction: Dict, ground_truth: Dict) -> str:
         """Generate cache key for grading results"""
         key = f"{task_id}_{json.dumps(prediction, sort_keys=True)}_{json.dumps(ground_truth, sort_keys=True)}"
@@ -45,6 +59,8 @@ class OptimizedModeratorGrader:
         }
         
         score = graders.get(task_id, lambda *args: 0.0)(prediction, ground_truth)
+        # CRITICAL: Clamp score to valid range (0, 1) - not exactly 0 or 1
+        score = self._clamp_score(score)
         
         if use_cache:
             self.cache[cache_key] = score
