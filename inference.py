@@ -28,25 +28,27 @@ except ImportError:
     print("[ERROR] OpenAI package not found. Install with: pip install openai>=1.3.0")
     sys.exit(1)
 
-# ============ ENVIRONMENT CONFIGURATION ============
+# ============ ENVIRONMENT CONFIGURATION - NO FALLBACKS ============
+# Validator injects these - must use os.environ[] (not getenv) to fail fast if missing
 
-# Use validator-provided environment variables (REQUIRED)
-API_BASE_URL = os.getenv("API_BASE_URL")
-API_KEY = os.getenv("API_KEY")
-
-# Fallback to alternatives if not provided by validator
-if not API_BASE_URL:
-    API_BASE_URL = os.getenv("LITELLM_PROXY_BASE_URL", "https://router.huggingface.co/v1")
-if not API_KEY:
-    API_KEY = os.getenv("HF_TOKEN")
-
-if not API_KEY or not API_BASE_URL:
-    print(f"[ERROR] Missing required environment variables:")
-    print(f"  API_BASE_URL={API_BASE_URL}")
-    print(f"  API_KEY={'***' if API_KEY else 'NOT_SET'}")
+try:
+    API_BASE_URL = os.environ["API_BASE_URL"]
+    API_KEY = os.environ["API_KEY"]
+except KeyError as e:
+    print(f"[ERROR] Missing required environment variable: {e}", file=sys.stderr)
     sys.exit(1)
 
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+BENCHMARK = "content-moderation-benchmark"
+ENVIRONMENT_HOST = os.getenv("ENVIRONMENT_HOST", "http://localhost:7860")
+
+# ============ INITIALIZE OPENAI CLIENT AT MODULE LEVEL ============
+# Must be at module level so validator can track ALL API calls through this instance
+
+client = OpenAI(
+    base_url=API_BASE_URL,
+    api_key=API_KEY,
+)
 
 BENCHMARK = "content-moderation-benchmark"
 ENVIRONMENT_HOST = os.getenv("ENVIRONMENT_HOST", "http://localhost:7860")
