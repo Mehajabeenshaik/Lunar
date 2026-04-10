@@ -56,6 +56,27 @@ class OptimizedModeratorGrader:
             7: self.grade_task_7,
             8: self.grade_task_8,
             9: self.grade_task_9,
+            10: self.grade_task_10,
+            11: self.grade_task_11,
+            12: self.grade_task_12,
+            13: self.grade_task_13,
+            14: self.grade_task_14,
+            15: self.grade_task_15,
+            16: self.grade_task_16,
+            17: self.grade_task_17,
+            18: self.grade_task_18,
+            19: self.grade_task_19,
+            20: self.grade_task_20,
+            21: self.grade_task_21,
+            22: self.grade_task_22,
+            23: self.grade_task_23,
+            24: self.grade_task_24,
+            25: self.grade_task_25,
+            26: self.grade_task_26,
+            27: self.grade_task_27,
+            28: self.grade_task_28,
+            29: self.grade_task_29,
+            30: self.grade_task_30,
         }
         
         score = graders.get(task_id, lambda *args: 0.0)(prediction, ground_truth)
@@ -417,6 +438,234 @@ class OptimizedModeratorGrader:
             scores['confidence'] = 0.5
         
         return (scores['detection'] * 0.70) + (scores['confidence'] * 0.30)
+
+
+# ============ DOMAIN 4: IMAGE & MULTIMODAL (Tasks 10-14) ============
+
+    @staticmethod
+    def grade_task_10(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 10: Image Safety - Binary safe/explicit"""
+        try:
+            pred = prediction.get("safety", "").lower().strip()
+            true = ground_truth.get("safety", "").lower().strip()
+            return 0.999 if pred == true else 0.001
+        except:
+            return 0.001
+
+    @staticmethod
+    def grade_task_11(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 11: Visual Toxicity - Graduated severity"""
+        try:
+            pred_tox = prediction.get("toxicity", "").lower().strip()
+            true_tox = ground_truth.get("toxicity", "").lower().strip()
+            return 0.999 if pred_tox == true_tox else 0.5
+        except:
+            return 0.001
+
+    @staticmethod
+    def grade_task_12(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 12: Multimodal - Consider both image and text"""
+        try:
+            image_score = 0.999 if prediction.get("image_assessment") == ground_truth.get("image_assessment") else 0.1
+            text_score = 0.999 if prediction.get("text_assessment") == ground_truth.get("text_assessment") else 0.1
+            return (image_score + text_score) / 2.0
+        except:
+            return 0.001
+
+    @staticmethod
+    def grade_task_13(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 13: Deepfake Detection - Authenticity judgment"""
+        try:
+            pred_auth = prediction.get("authenticity", "").lower().strip()
+            true_auth = ground_truth.get("authenticity", "").lower().strip()
+            return 0.999 if pred_auth == true_auth else 0.5
+        except:
+            return 0.001
+
+    @staticmethod
+    def grade_task_14(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 14: Scene Safety - Context appropriateness"""
+        try:
+            contexts = ["workplace", "home", "public"]
+            matches = sum(1 for ctx in contexts if prediction.get(ctx) == ground_truth.get(ctx))
+            score = matches / len(contexts)
+            return max(0.1, min(0.999, score))
+        except:
+            return 0.001
+
+
+# ============ DOMAIN 5: USER CONTEXT (Tasks 15-20) ============
+
+    @staticmethod
+    def grade_task_15(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 15: Author Credibility - Account legitimacy"""
+        try:
+            pred_cred = prediction.get("credibility", "").lower().strip()
+            true_cred = ground_truth.get("credibility", "").lower().strip()
+            return 0.999 if pred_cred == true_cred else 0.5
+        except:
+            return 0.001
+
+    @staticmethod
+    def grade_task_16(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 16: Bot Detection - Classify as human/bot"""
+        try:
+            pred_bot = prediction.get("is_bot", "").lower().strip()
+            true_bot = ground_truth.get("is_bot", "").lower().strip()
+            pred_bot_bool = pred_bot in ["true", "1", "yes"]
+            true_bot_bool = true_bot in ["true", "1", "yes"] or ground_truth.get("is_bot") is True
+            return 0.999 if pred_bot_bool == true_bot_bool else 0.5
+        except:
+            return 0.001
+
+    @staticmethod
+    def grade_task_17(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 17: Inauthentic Behavior Patterns - Network coordination"""
+        try:
+            pred_coord = prediction.get("coordination", "").lower().strip()
+            true_coord = ground_truth.get("coordination", "").lower().strip()
+            return 0.999 if pred_coord == true_coord else 0.5
+        except:
+            return 0.001
+
+    @staticmethod
+    def grade_task_18(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 18: Misinformation Spread - Verify claim accuracy"""
+        try:
+            pred_vera = prediction.get("veracity", "").lower().strip()
+            true_vera = ground_truth.get("veracity", "").lower().strip()
+            return 0.999 if pred_vera == true_vera else 0.3
+        except:
+            return 0.001
+
+    @staticmethod
+    def grade_task_19(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 19: User Appeal Fairness - Judge appeal validity"""
+        try:
+            pred_appeal = prediction.get("appeal_validity", "").lower().strip()
+            true_appeal = ground_truth.get("appeal_validity", "").lower().strip()
+            return 0.999 if pred_appeal == true_appeal else 0.5
+        except:
+            return 0.001
+
+    @staticmethod
+    def grade_task_20(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 20: User Trust Score - Build user reputation"""
+        try:
+            pred_trust = float(prediction.get("trust_score", 5)) / 10.0
+            true_trust = float(ground_truth.get("trust_score", 5)) / 10.0
+            diff = abs(pred_trust - true_trust)
+            score = max(0.1, 1.0 - diff)
+            return max(0.001, min(0.999, score))
+        except:
+            return 0.001
+
+
+# ============ DOMAIN 6: CROSS-POST ANALYSIS (Tasks 21-25) ============
+
+    @staticmethod
+    def grade_task_21(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 21: Campaign Detection - Identify coordinated posts"""
+        try:
+            pred_camp = prediction.get("campaign_likelihood", "").lower().strip()
+            true_camp = ground_truth.get("campaign_likelihood", "").lower().strip()
+            return 0.999 if pred_camp == true_camp else 0.5
+        except:
+            return 0.001
+
+    @staticmethod
+    def grade_task_22(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 22: Viral Misinformation - Track false claims"""
+        try:
+            pred_viral = prediction.get("spread_rate", "").lower().strip()
+            true_viral = ground_truth.get("spread_rate", "").lower().strip()
+            return 0.999 if pred_viral == true_viral else 0.5
+        except:
+            return 0.001
+
+    @staticmethod
+    def grade_task_23(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 23: Harassment Network - Detect coordinated harassment"""
+        try:
+            pred_sever = prediction.get("severity", "").lower().strip()
+            true_sever = ground_truth.get("severity", "").lower().strip()
+            return 0.999 if pred_sever == true_sever else 0.5
+        except:
+            return 0.001
+
+    @staticmethod
+    def grade_task_24(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 24: Context Collapse - Content appropriateness varies"""
+        try:
+            contexts = list(prediction.keys())
+            matches = sum(1 for ctx in contexts if prediction.get(ctx) == ground_truth.get(ctx))
+            score = matches / max(len(contexts), 1)
+            return max(0.1, min(0.999, score))
+        except:
+            return 0.001
+
+    @staticmethod
+    def grade_task_25(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 25: Cross-platform Consistency - Maintain consistency"""
+        try:
+            pred_cons = prediction.get("consistency", "").lower().strip()
+            true_cons = ground_truth.get("consistency", "").lower().strip()
+            return 0.999 if pred_cons == true_cons else 0.5
+        except:
+            return 0.001
+
+
+# ============ DOMAIN 7: ADVANCED REASONING (Tasks 26-30) ============
+
+    @staticmethod
+    def grade_task_26(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 26: Satire vs Hate - Distinguish satire from genuine hate"""
+        try:
+            pred_sat = prediction.get("classification", "").lower().strip()
+            true_sat = ground_truth.get("classification", "").lower().strip()
+            return 0.999 if pred_sat == true_sat else 0.3
+        except:
+            return 0.001
+
+    @staticmethod
+    def grade_task_27(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 27: Cultural Sensitivity - Context-specific appropriateness"""
+        try:
+            pred_cult = prediction.get("appropriateness", "").lower().strip()
+            true_cult = ground_truth.get("appropriateness", "").lower().strip()
+            return 0.999 if pred_cult == true_cult else 0.5
+        except:
+            return 0.001
+
+    @staticmethod
+    def grade_task_28(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 28: Policy Evolution - Apply updated policies"""
+        try:
+            pred_policy = prediction.get("action", "").lower().strip()
+            true_policy = ground_truth.get("action", "").lower().strip()
+            return 0.999 if pred_policy == true_policy else 0.5
+        except:
+            return 0.001
+
+    @staticmethod
+    def grade_task_29(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 29: Multi-language - Consistent across languages"""
+        try:
+            pred_lang = prediction.get("category", "").lower().strip()
+            true_lang = ground_truth.get("category", "").lower().strip()
+            return 0.999 if pred_lang == true_lang else 0.5
+        except:
+            return 0.001
+
+    @staticmethod
+    def grade_task_30(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
+        """Task 30: Accessibility - Accessibility-aware moderation"""
+        try:
+            pred_access = prediction.get("assessment", "").lower().strip()
+            true_access = ground_truth.get("assessment", "").lower().strip()
+            return 0.999 if pred_access == true_access else 0.5
+        except:
+            return 0.001
 
 
 # ============ BACKWARD COMPATIBILITY ============

@@ -442,7 +442,7 @@ def run_all_tasks_parallel(speed_factor: float = 1.0) -> Tuple[Dict, float, List
     else:
         # Sequential fallback
         agent = OptimizedContentModerationAgent()
-        for task_id in range(1, 10):
+        for task_id in range(1, 31):
             try:
                 success, score, metrics = agent.run_task(task_id)
                 task_results[task_id] = {
@@ -462,14 +462,14 @@ def run_all_tasks_parallel(speed_factor: float = 1.0) -> Tuple[Dict, float, List
     
     end_time = time.time()
     total_time = end_time - start_time
-    avg_score = total_score / 9.0
+    avg_score = total_score / 30.0
     total_tokens = sum(m.tokens_used for m in all_metrics)
     
     # Print performance report
     print("\n" + "="*60, file=sys.stderr)
-    print("OPTIMIZED BASELINE SCORES (9 TASKS)", file=sys.stderr)
+    print("OPTIMIZED BASELINE SCORES (30 TASKS)", file=sys.stderr)
     print("="*60, file=sys.stderr)
-    for task_id in range(1, 10):
+    for task_id in range(1, 31):
         result = task_results.get(task_id, {"score": 0.0, "success": False, "metrics": None})
         metrics = result.get("metrics")
         if metrics:

@@ -103,9 +103,9 @@ async def get_manifest():
         "name": "content-moderation-benchmark",
         "version": "2.0",
         "spec_version": 2,
-        "description": "Meta Content Moderation Agent Environment - 9 Tasks Enhanced",
+        "description": "Meta Content Moderation Agent Environment - 30 Tasks Enhanced",
         "type": "rl-environment",
-        "tasks": 9,
+        "tasks": 30,
         "reward_range": [0.0, 1.0],
         "observation_space": {
             "type": "json",
@@ -114,7 +114,11 @@ async def get_manifest():
         "domains": [
             "domain_1_basic_classification",
             "domain_2_context_aware_moderation",
-            "domain_3_edge_cases"
+            "domain_3_edge_cases",
+            "domain_4_image_multimodal",
+            "domain_5_user_context_behavior",
+            "domain_6_cross_post_analysis",
+            "domain_7_advanced_reasoning"
         ]
     }
 
@@ -132,8 +136,8 @@ async def start_session(request: StartSessionRequest):
         session_id and initial observation
     """
     try:
-        if request.task_id not in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
-            raise ValueError("task_id must be 1-9")
+        if request.task_id not in range(1, 31):
+            raise ValueError("task_id must be 1-30")
         
         session_id = sessions.create_session(
             task_id=request.task_id,
@@ -215,82 +219,47 @@ async def delete_session(session_id: str):
 
 @app.get("/tasks")
 async def list_tasks():
-    """List all available 9 tasks"""
+    """List all available 30 tasks"""
     return {
-        "total_tasks": 9,
+        "total_tasks": 30,
         "tasks": [
-            {
-                "id": 1,
-                "domain": "domain_1_basic_classification",
-                "name": "Post Classification (Easy)",
-                "description": "Classify posts as Safe, Hate Speech, Spam, or Misinformation",
-                "difficulty": "easy",
-                "reward_metric": "Exact match (1.0 correct, 0.0 wrong)"
-            },
-            {
-                "id": 2,
-                "domain": "domain_1_basic_classification",
-                "name": "Classification with Reasoning (Medium)",
-                "description": "Classify posts with reasoning and severity (1-5)",
-                "difficulty": "medium",
-                "reward_metric": "Composite (50% category, 50% severity)"
-            },
-            {
-                "id": 3,
-                "domain": "domain_1_basic_classification",
-                "name": "Full Moderation Decision (Hard)",
-                "description": "Complete moderation: classify, severity, action, explanation",
-                "difficulty": "hard",
-                "reward_metric": "Weighted (25% each: category, severity, action, explanation)"
-            },
-            {
-                "id": 4,
-                "domain": "domain_2_context_aware_moderation",
-                "name": "Author History Context (Easy)",
-                "description": "Use author history and reputation to inform moderation decisions",
-                "difficulty": "easy",
-                "reward_metric": "Accuracy considering author reputation"
-            },
-            {
-                "id": 5,
-                "domain": "domain_2_context_aware_moderation",
-                "name": "Trending Topic Context (Medium)",
-                "description": "Consider trending topics and current events in moderation",
-                "difficulty": "medium",
-                "reward_metric": "Contextual accuracy with trending awareness"
-            },
-            {
-                "id": 6,
-                "domain": "domain_2_context_aware_moderation",
-                "name": "Appeal Case Handling (Hard)",
-                "description": "Review flagged content appeals with full context",
-                "difficulty": "hard",
-                "reward_metric": "Appeal resolution accuracy"
-            },
-            {
-                "id": 7,
-                "domain": "domain_3_edge_cases",
-                "name": "False Positive Detection (Easy)",
-                "description": "Identify incorrectly flagged content",
-                "difficulty": "easy",
-                "reward_metric": "False positive detection accuracy"
-            },
-            {
-                "id": 8,
-                "domain": "domain_3_edge_cases",
-                "name": "Sarcasm & Irony Detection (Medium)",
-                "description": "Detect sarcasm and irony to avoid false positives",
-                "difficulty": "medium",
-                "reward_metric": "Tone analysis accuracy"
-            },
-            {
-                "id": 9,
-                "domain": "domain_3_edge_cases",
-                "name": "Coordinated Inauthentic Behavior (Hard)",
-                "description": "Detect coordinated inauthentic behavior networks",
-                "difficulty": "hard",
-                "reward_metric": "Behavior pattern detection accuracy"
-            }
+            # Domain 1: Basic Classification (1-3)
+            {"id": 1, "domain": "domain_1_basic_classification", "name": "Post Classification (Easy)", "difficulty": "easy"},
+            {"id": 2, "domain": "domain_1_basic_classification", "name": "Classification with Reasoning (Medium)", "difficulty": "medium"},
+            {"id": 3, "domain": "domain_1_basic_classification", "name": "Full Moderation Decision (Hard)", "difficulty": "hard"},
+            # Domain 2: Context-Aware (4-6)
+            {"id": 4, "domain": "domain_2_context_aware_moderation", "name": "Author History Context (Easy)", "difficulty": "easy"},
+            {"id": 5, "domain": "domain_2_context_aware_moderation", "name": "Trending Topic Context (Medium)", "difficulty": "medium"},
+            {"id": 6, "domain": "domain_2_context_aware_moderation", "name": "Appeal Case Handling (Hard)", "difficulty": "hard"},
+            # Domain 3: Edge Cases (7-9)
+            {"id": 7, "domain": "domain_3_edge_cases", "name": "False Positive Detection (Easy)", "difficulty": "easy"},
+            {"id": 8, "domain": "domain_3_edge_cases", "name": "Sarcasm & Irony Detection (Medium)", "difficulty": "medium"},
+            {"id": 9, "domain": "domain_3_edge_cases", "name": "Coordinated Inauthentic Behavior (Hard)", "difficulty": "hard"},
+            # Domain 4: Image & Multimodal (10-14)
+            {"id": 10, "domain": "domain_4_image_multimodal", "name": "Image Safety Classification (Easy)", "difficulty": "easy"},
+            {"id": 11, "domain": "domain_4_image_multimodal", "name": "Visual Toxicity Detection (Medium)", "difficulty": "medium"},
+            {"id": 12, "domain": "domain_4_image_multimodal", "name": "Multimodal Context (Hard)", "difficulty": "hard"},
+            {"id": 13, "domain": "domain_4_image_multimodal", "name": "Deepfake Detection (Medium)", "difficulty": "medium"},
+            {"id": 14, "domain": "domain_4_image_multimodal", "name": "Scene Safety (Easy)", "difficulty": "easy"},
+            # Domain 5: User Context (15-20)
+            {"id": 15, "domain": "domain_5_user_context_behavior", "name": "Author Credibility (Medium)", "difficulty": "medium"},
+            {"id": 16, "domain": "domain_5_user_context_behavior", "name": "Bot Detection (Medium)", "difficulty": "medium"},
+            {"id": 17, "domain": "domain_5_user_context_behavior", "name": "Inauthentic Behavior Patterns (Hard)", "difficulty": "hard"},
+            {"id": 18, "domain": "domain_5_user_context_behavior", "name": "Misinformation Spread Tracking (Hard)", "difficulty": "hard"},
+            {"id": 19, "domain": "domain_5_user_context_behavior", "name": "User Appeal Fairness (Medium)", "difficulty": "medium"},
+            {"id": 20, "domain": "domain_5_user_context_behavior", "name": "User Trust Score (Hard)", "difficulty": "hard"},
+            # Domain 6: Cross-Post (21-25)
+            {"id": 21, "domain": "domain_6_cross_post_analysis", "name": "Campaign Detection (Hard)", "difficulty": "hard"},
+            {"id": 22, "domain": "domain_6_cross_post_analysis", "name": "Viral Misinformation (Hard)", "difficulty": "hard"},
+            {"id": 23, "domain": "domain_6_cross_post_analysis", "name": "Harassment Network (Hard)", "difficulty": "hard"},
+            {"id": 24, "domain": "domain_6_cross_post_analysis", "name": "Context Collapse (Medium)", "difficulty": "medium"},
+            {"id": 25, "domain": "domain_6_cross_post_analysis", "name": "Cross-platform Consistency (Medium)", "difficulty": "medium"},
+            # Domain 7: Advanced Reasoning (26-30)
+            {"id": 26, "domain": "domain_7_advanced_reasoning", "name": "Satire vs Hate (Hard)", "difficulty": "hard"},
+            {"id": 27, "domain": "domain_7_advanced_reasoning", "name": "Cultural Sensitivity (Hard)", "difficulty": "hard"},
+            {"id": 28, "domain": "domain_7_advanced_reasoning", "name": "Policy Evolution (Medium)", "difficulty": "medium"},
+            {"id": 29, "domain": "domain_7_advanced_reasoning", "name": "Multi-language Moderation (Hard)", "difficulty": "hard"},
+            {"id": 30, "domain": "domain_7_advanced_reasoning", "name": "Accessibility Considerations (Medium)", "difficulty": "medium"},
         ]
     }
 
@@ -301,18 +270,26 @@ async def get_stats():
     return {
         "active_sessions": len(sessions.sessions),
         "environment": "ContentModerationEnv",
-        "tasks_available": 9,
+        "tasks_available": 30,
         "tasks_completed": len([s for s in sessions.sessions.values() if s.get("done")]),
         "reward_range": [0.0, 1.0],
         "domains": [
             "domain_1_basic_classification",
             "domain_2_context_aware_moderation",
-            "domain_3_edge_cases"
+            "domain_3_edge_cases",
+            "domain_4_image_multimodal",
+            "domain_5_user_context_behavior",
+            "domain_6_cross_post_analysis",
+            "domain_7_advanced_reasoning"
         ],
         "task_structure": {
             "domain_1_basic_classification": 3,
             "domain_2_context_aware_moderation": 3,
-            "domain_3_edge_cases": 3
+            "domain_3_edge_cases": 3,
+            "domain_4_image_multimodal": 5,
+            "domain_5_user_context_behavior": 6,
+            "domain_6_cross_post_analysis": 5,
+            "domain_7_advanced_reasoning": 5
         },
         "timestamp": datetime.now().isoformat()
     }
