@@ -95,14 +95,14 @@ class OptimizedModeratorGrader:
         """Task 1: Post Classification (Easy) - Exact match scoring
         
         OPTIMIZATION: Simple, fast, deterministic
-        Reward: 1.0 (correct) | 0.0 (incorrect)
+        Reward: 0.99 (correct) | 0.01 (incorrect)
         """
         try:
             pred = prediction.get("category", "").lower().strip()
             true = ground_truth.get("category", "").lower().strip()
-            return 1.0 if pred == true else 0.0
+            return 0.99 if pred == true else 0.01
         except:
-            return 0.0
+            return 0.01
     
     @staticmethod
     def grade_task_2(prediction: Dict[str, Any], ground_truth: Dict[str, Any]) -> float:
@@ -118,9 +118,9 @@ class OptimizedModeratorGrader:
         try:
             pred_cat = prediction.get("category", "").lower().strip()
             true_cat = ground_truth.get("category", "").lower().strip()
-            scores['category'] = 1.0 if pred_cat == true_cat else 0.0
+            scores['category'] = 0.99 if pred_cat == true_cat else 0.01
         except:
-            scores['category'] = 0.0
+            scores['category'] = 0.01
         
         # Severity accuracy (50%) - improved with category context
         try:
@@ -129,15 +129,15 @@ class OptimizedModeratorGrader:
             sev_diff = abs(pred_sev - true_sev)
             
             if sev_diff == 0:
-                scores['severity'] = 1.0
+                scores['severity'] = 0.99
             elif sev_diff == 1:
                 scores['severity'] = 0.7  # Better partial credit
             elif sev_diff == 2:
                 scores['severity'] = 0.4
             else:
-                scores['severity'] = 0.0
+                scores['severity'] = 0.01
         except:
-            scores['severity'] = 0.0
+            scores['severity'] = 0.01
         
         return (scores['category'] * 0.50) + (scores['severity'] * 0.50)
     
@@ -157,9 +157,9 @@ class OptimizedModeratorGrader:
         try:
             pred_cat = prediction.get("category", "").lower().strip()
             true_cat = ground_truth.get("category", "").lower().strip()
-            scores['category'] = 1.0 if pred_cat == true_cat else 0.0
+            scores['category'] = 0.99 if pred_cat == true_cat else 0.01
         except:
-            scores['category'] = 0.0
+            scores['category'] = 0.01
         
         # Severity accuracy (25%) - with better partial credit
         try:
@@ -168,23 +168,23 @@ class OptimizedModeratorGrader:
             sev_diff = abs(pred_sev - true_sev)
             
             if sev_diff == 0:
-                scores['severity'] = 1.0
+                scores['severity'] = 0.99
             elif sev_diff == 1:
                 scores['severity'] = 0.7
             elif sev_diff == 2:
                 scores['severity'] = 0.4
             else:
-                scores['severity'] = 0.0
+                scores['severity'] = 0.01
         except:
-            scores['severity'] = 0.0
+            scores['severity'] = 0.01
         
         # Action accuracy (25%) - critical for moderation
         try:
             pred_act = prediction.get("action", "").lower().strip()
             true_act = ground_truth.get("action", "").lower().strip()
-            scores['action'] = 1.0 if pred_act == true_act else 0.0
+            scores['action'] = 0.99 if pred_act == true_act else 0.01
         except:
-            scores['action'] = 0.0
+            scores['action'] = 0.01
         
         # Reasoning quality (25%) - length, content, coherence
         try:
@@ -199,14 +199,14 @@ class OptimizedModeratorGrader:
             elif reasoning_len < 100:
                 scores['reasoning'] = 0.85
             else:
-                scores['reasoning'] = 1.0
+                scores['reasoning'] = 0.95
             
             # Bonus for mentioning key factors
             reasoning_lower = reasoning.lower()
             if any(word in reasoning_lower for word in ["severity", "policy", "context", "prior", "history"]):
-                scores['reasoning'] = min(1.0, scores['reasoning'] + 0.1)
+                scores['reasoning'] = min(0.98, scores['reasoning'] + 0.1)
         except:
-            scores['reasoning'] = 0.0
+            scores['reasoning'] = 0.01
         
         return sum(scores.values()) / 4.0
     
@@ -229,13 +229,13 @@ class OptimizedModeratorGrader:
             sev_diff = abs(pred_sev - true_sev)
             
             if sev_diff == 0:
-                scores['severity'] = 1.0
+                scores['severity'] = 0.99
             elif sev_diff == 1:
                 scores['severity'] = 0.7
             else:
-                scores['severity'] = 0.0
+                scores['severity'] = 0.01
         except:
-            scores['severity'] = 0.0
+            scores['severity'] = 0.01
         
         # Reasoning should mention history/context (40%)
         try:
@@ -244,13 +244,13 @@ class OptimizedModeratorGrader:
             history_mentioned = sum(1 for kw in history_keywords if kw in reasoning)
             
             if history_mentioned >= 2:
-                scores['reasoning'] = 1.0
+                scores['reasoning'] = 0.95
             elif history_mentioned == 1:
                 scores['reasoning'] = 0.7
             else:
                 scores['reasoning'] = 0.3  # Partial credit even without explicit mention
         except:
-            scores['reasoning'] = 0.0
+            scores['reasoning'] = 0.01
         
         return (scores['severity'] * 0.60) + (scores['reasoning'] * 0.40)
     
@@ -269,9 +269,9 @@ class OptimizedModeratorGrader:
         try:
             pred_cat = prediction.get("category", "").lower().strip()
             true_cat = ground_truth.get("category", "").lower().strip()
-            scores['category'] = 1.0 if pred_cat == true_cat else 0.5
+            scores['category'] = 0.95 if pred_cat == true_cat else 0.5
         except:
-            scores['category'] = 0.0
+            scores['category'] = 0.01
         
         # Policy exception detection (40%) - most important
         try:
@@ -280,9 +280,9 @@ class OptimizedModeratorGrader:
             pred_exc_bool = pred_exc in ["true", "1", "yes", "yes", "enabled"]
             true_exc_bool = true_exc in ["true", "1", "yes", "enabled"] or ground_truth.get("policy_exception") is True
             
-            scores['exception'] = 1.0 if pred_exc_bool == true_exc_bool else 0.3
+            scores['exception'] = 0.95 if pred_exc_bool == true_exc_bool else 0.3
         except:
-            scores['exception'] = 0.0
+            scores['exception'] = 0.01
         
         # Action correctness (30%)
         try:
@@ -291,9 +291,9 @@ class OptimizedModeratorGrader:
             
             # If exception exists, correct action is "label"; otherwise specific action
             expected_act = "label" if ground_truth.get("policy_exception") else true_act
-            scores['action'] = 1.0 if pred_act == expected_act else 0.0
+            scores['action'] = 0.95 if pred_act == expected_act else 0.01
         except:
-            scores['action'] = 0.0
+            scores['action'] = 0.01
         
         return (scores['category'] * 0.30) + (scores['exception'] * 0.40) + (scores['action'] * 0.30)
     
@@ -311,9 +311,9 @@ class OptimizedModeratorGrader:
         try:
             pred_verdict = prediction.get("verdict", "").lower().strip()
             true_verdict = ground_truth.get("verdict", "").lower().strip()
-            scores['verdict'] = 1.0 if pred_verdict == true_verdict else 0.0
+            scores['verdict'] = 0.95 if pred_verdict == true_verdict else 0.01
         except:
-            scores['verdict'] = 0.0
+            scores['verdict'] = 0.01
         
         # Reasoning quality (40%)
         try:
@@ -354,17 +354,17 @@ class OptimizedModeratorGrader:
             pred_fp_bool = pred_fp in ["true", "1", "yes"]
             true_fp_bool = true_fp in ["true", "1", "yes"] or ground_truth.get("is_false_positive") is True
             
-            scores['detection'] = 1.0 if pred_fp_bool == true_fp_bool else 0.0
+            scores['detection'] = 0.95 if pred_fp_bool == true_fp_bool else 0.01
         except:
-            scores['detection'] = 0.0
+            scores['detection'] = 0.01
         
         # Category accuracy if not false positive (30%)
         try:
             pred_cat = prediction.get("category", "").lower().strip()
             true_cat = ground_truth.get("category", "").lower().strip()
-            scores['category'] = 1.0 if pred_cat == true_cat else 0.5
+            scores['category'] = 0.95 if pred_cat == true_cat else 0.5
         except:
-            scores['category'] = 0.0
+            scores['category'] = 0.01
         
         return (scores['detection'] * 0.70) + (scores['category'] * 0.30)
     
@@ -382,9 +382,9 @@ class OptimizedModeratorGrader:
         try:
             pred_tone = prediction.get("tone", "").lower().strip()
             true_tone = ground_truth.get("tone", "").lower().strip()
-            scores['tone'] = 1.0 if pred_tone == true_tone else 0.5
+            scores['tone'] = 0.95 if pred_tone == true_tone else 0.5
         except:
-            scores['tone'] = 0.0
+            scores['tone'] = 0.01
         
         # Severity accuracy (50%) - should be lower for sarcasm
         try:
@@ -393,13 +393,13 @@ class OptimizedModeratorGrader:
             sev_diff = abs(pred_sev - true_sev)
             
             if sev_diff == 0:
-                scores['severity'] = 1.0
+                scores['severity'] = 0.99
             elif sev_diff == 1:
                 scores['severity'] = 0.7
             else:
-                scores['severity'] = 0.0
+                scores['severity'] = 0.01
         except:
-            scores['severity'] = 0.0
+            scores['severity'] = 0.01
         
         return (scores['tone'] * 0.50) + (scores['severity'] * 0.50)
     
@@ -420,9 +420,9 @@ class OptimizedModeratorGrader:
             pred_coord_bool = pred_coord in ["true", "1", "yes"]
             true_coord_bool = true_coord in ["true", "1", "yes"] or ground_truth.get("is_coordinated") is True
             
-            scores['detection'] = 1.0 if pred_coord_bool == true_coord_bool else 0.0
+            scores['detection'] = 0.95 if pred_coord_bool == true_coord_bool else 0.01
         except:
-            scores['detection'] = 0.0
+            scores['detection'] = 0.01
         
         # Confidence level (30/)
         try:
