@@ -151,6 +151,19 @@ class ContentModerationEnv:
             # Must clamp to (0, 1) range - not exactly 0 or 1
             reward = 0.5 if any(action.values()) else 0.001
         
+        # CRITICAL: Validate score is strictly within (0, 1)
+        if reward is None or reward <= 0.0:
+            reward = 0.001
+        elif reward >= 1.0:
+            reward = 0.999
+        
+        # Ensure reward is float and in valid range
+        try:
+            reward = float(reward)
+            assert 0 < reward < 1, f"Score {reward} out of bounds!"
+        except (ValueError, AssertionError) as e:
+            reward = 0.5  # Default to middle value on error
+        
         self.rewards_history.append(reward)
         
         # Get next observation

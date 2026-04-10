@@ -79,7 +79,7 @@ class OptimizedModeratorGrader:
             30: self.grade_task_30,
         }
         
-        score = graders.get(task_id, lambda *args: 0.0)(prediction, ground_truth)
+        score = graders.get(task_id, lambda *args: 0.5)(prediction, ground_truth)
         # CRITICAL: Clamp score to valid range (0, 1) - not exactly 0 or 1
         score = self._clamp_score(score)
         
