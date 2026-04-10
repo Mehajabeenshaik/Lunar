@@ -399,7 +399,8 @@ async def get_state():
         "environment": "ContentModerationEnv",
         "version": "2.0",
         "num_tasks": 30,
-        "reward_range": [0.0, 1.0],
+        "reward_range": [0.001, 0.999],
+        "reward_range_description": "All task scores strictly between 0 and 1 (exclusive bounds)",
         "timestamp": datetime.now().isoformat()
     }
 
@@ -453,13 +454,14 @@ async def get_state():
     return {
         "name": "content-moderation-benchmark",
         "version": "2.0",
-        "tasks_available": 9,
+        "tasks_available": 30,
         "active_sessions": len(sessions.sessions),
-        "reward_range": [0.0, 1.0],
+        "reward_range": [0.001, 0.999],
+        "reward_range_description": "All task scores strictly between 0 and 1 (exclusive bounds)",
         "environment": "ContentModerationEnv",
         "status": "ready",
-        "domains": 3,
-        "tasks_per_domain": 3
+        "domains": 7,
+        "tasks_per_domain": "3-6"
     }
 
 

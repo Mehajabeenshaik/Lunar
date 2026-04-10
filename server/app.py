@@ -103,10 +103,11 @@ async def get_manifest():
         "name": "content-moderation-benchmark",
         "version": "2.0",
         "spec_version": 2,
-        "description": "Meta Content Moderation Agent Environment - 9 Tasks Enhanced",
+        "description": "Meta Content Moderation Agent Environment - 30 Tasks Enhanced",
         "type": "rl-environment",
-        "tasks": 9,
-        "reward_range": [0.0, 1.0],
+        "tasks": 30,
+        "reward_range": [0.001, 0.999],
+        "reward_range_description": "All task scores strictly between 0 and 1 (exclusive bounds)",
         "observation_space": {
             "type": "json",
             "description": "JSON object with post content and task instructions"
@@ -301,13 +302,18 @@ async def get_stats():
     return {
         "active_sessions": len(sessions.sessions),
         "environment": "ContentModerationEnv",
-        "tasks_available": 9,
+        "tasks_available": 30,
         "tasks_completed": len([s for s in sessions.sessions.values() if s.get("done")]),
-        "reward_range": [0.0, 1.0],
+        "reward_range": [0.001, 0.999],
+        "reward_range_description": "All task scores strictly between 0 and 1 (exclusive bounds)",
         "domains": [
             "domain_1_basic_classification",
             "domain_2_context_aware_moderation",
-            "domain_3_edge_cases"
+            "domain_3_edge_cases",
+            "domain_4_image_multimodal",
+            "domain_5_user_context_behavior",
+            "domain_6_cross_post_analysis",
+            "domain_7_advanced_reasoning"
         ],
         "task_structure": {
             "domain_1_basic_classification": 3,
@@ -371,9 +377,10 @@ async def get_state():
     return {
         "name": "content-moderation-benchmark",
         "version": "2.0",
-        "tasks_available": 9,
+        "tasks_available": 30,
         "active_sessions": len(sessions.sessions),
-        "reward_range": [0.0, 1.0],
+        "reward_range": [0.001, 0.999],
+        "reward_range_description": "All task scores strictly between 0 and 1 (exclusive bounds)",
         "environment": "ContentModerationEnv",
         "status": "ready",
         "domains": 3,
