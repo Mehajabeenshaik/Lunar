@@ -246,6 +246,67 @@ async def get_stats():
     }
 
 
+# ============ OPENENV STANDARD ENDPOINTS ============
+
+@app.post("/reset")
+async def reset():
+    """
+    OpenEnv standard: Reset environment
+    Creates new session with default task (task_id=1)
+    
+    Returns:
+        observation: Initial observation
+        session_id: Session identifier for subsequent /step calls
+    """
+    try:
+        session_id = sessions.create_session(task_id=1, seed=None)
+        env = sessions.get_session(session_id)
+        observation = env.reset()
+        
+        return {
+            "observation": observation,
+            "session_id": session_id
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/step")
+async def step():
+    """
+    OpenEnv standard: Execute step
+    NOTE: This endpoint requires session context via headers or query params
+    For proper OpenEnv compliance, use /session/{session_id}/step instead
+    
+    Returns:
+        observation, reward, done, info
+    """
+    raise HTTPException(
+        status_code=400,
+        detail="/step endpoint requires session_id. Use /session/{session_id}/step instead"
+    )
+
+
+@app.get("/state")
+async def get_state():
+    """
+    OpenEnv standard: Get environment state
+    Returns metadata about current environment configuration
+    
+    Returns:
+        Environment state and configuration
+    """
+    return {
+        "name": "content-moderation-benchmark",
+        "version": "1.0.0",
+        "tasks_available": 3,
+        "active_sessions": len(sessions.sessions),
+        "reward_range": [0.0, 1.0],
+        "environment": "ContentModerationEnv",
+        "status": "ready"
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 7860))
