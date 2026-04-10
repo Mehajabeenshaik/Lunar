@@ -31,7 +31,7 @@ dev = [
 ]
 
 [project.scripts]
-server = "app:run_server"
+server = "server.app:main"
 
 [project.urls]
 Homepage = "https://github.com/Mehajabeenshaik/Lunar"
