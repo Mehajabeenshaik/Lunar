@@ -1,0 +1,93 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lunar-moderation"
+version = "1.0.0"
+description = "Content Moderation OpenEnv Benchmark - LUNAR"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Mehajabeen Shaik", email = "mehajabeen.shaik@example.com"}
+]
+
+dependencies = [
+    "fastapi>=0.104.1",
+    "uvicorn>=0.24.0",
+    "pydantic>=2.5.0",
+    "python-dotenv>=1.0.0",
+    "requests>=2.31.0",
+    "openai>=1.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "httpx>=0.25.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Mehajabeenshaik/Lunar"
+Repository = "https://github.com/Mehajabeenshaik/Lunar.git"
+Documentation = "https://github.com/Mehajabeenshaik/Lunar#readme"
+
+[tool.setuptools]
+packages = ["content_moderation_env"]
+
+[tool.setuptools.package-data]
+content_moderation_env = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+asyncio_mode = "auto"
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "warehouse-env"
+version = "1.0.0"
+description = "Real-world warehouse inventory management RL environment"
+authors = [{name = "OpenEnv Team", email = "team@openenv.dev"}]
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.0",
+    "numpy>=1.24",
+    "fastapi>=0.100",
+    "uvicorn>=0.23",
+    "openai>=1.0",
+    "python-dotenv>=1.0",
+    "openenv>=0.1.0",
+]
+
+[project.scripts]
+server = "warehouse_env.server:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "black>=23.0",
+    "ruff>=0.1",
+]
+
+[tool.setuptools]
+packages = ["warehouse_env"]
