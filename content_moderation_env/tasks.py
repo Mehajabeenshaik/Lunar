@@ -63,9 +63,9 @@ class Task1_Classification:
         """Exact match scoring"""
         try:
             predicted = ContentCategory(predicted_category.lower())
-            return 1.0 if predicted == ground_truth else 0.0
+            return 0.99 if predicted == ground_truth else 0.01
         except (ValueError, AttributeError):
-            return 0.0
+            return 0.01
     
     @staticmethod
     def get_observation(post: Post) -> Dict:
@@ -109,16 +109,16 @@ class Task2_ClassifyWithReasoning:
             predicted = None
         
         # Category accuracy (50% of score)
-        category_score = 1.0 if predicted == ground_truth_category else 0.0
+        category_score = 0.99 if predicted == ground_truth_category else 0.01
         
         # Severity accuracy (50% of score) - allow ±1 range for partial credit
         severity_diff = abs(predicted_severity - ground_truth_severity)
         if severity_diff == 0:
-            severity_score = 1.0
+            severity_score = 0.99
         elif severity_diff == 1:
             severity_score = 0.5
         else:
-            severity_score = 0.0
+            severity_score = 0.01
         
         return (category_score * 0.5) + (severity_score * 0.5)
     
@@ -168,25 +168,25 @@ class Task3_FullModeration:
         # Category accuracy (25%)
         try:
             predicted = ContentCategory(predicted_category.lower())
-            scores['category'] = 1.0 if predicted == ground_truth_category else 0.0
+            scores['category'] = 0.99 if predicted == ground_truth_category else 0.01
         except (ValueError, AttributeError):
-            scores['category'] = 0.0
+            scores['category'] = 0.01
         
         # Severity accuracy (25%) - with ±1 partial credit
         severity_diff = abs(predicted_severity - ground_truth_severity)
         if severity_diff == 0:
-            scores['severity'] = 1.0
+            scores['severity'] = 0.99
         elif severity_diff == 1:
             scores['severity'] = 0.5
         else:
-            scores['severity'] = 0.0
+            scores['severity'] = 0.01
         
         # Action accuracy (25%)
         try:
             predicted_act = ModerationAction(predicted_action.lower())
-            scores['action'] = 1.0 if predicted_act == ground_truth_action else 0.0
+            scores['action'] = 0.99 if predicted_act == ground_truth_action else 0.01
         except (ValueError, AttributeError):
-            scores['action'] = 0.0
+            scores['action'] = 0.01
         
         # All 4 components must be reasonable (25%) - simplified to action correctness bonus
         # In production, this would evaluate explanation quality
