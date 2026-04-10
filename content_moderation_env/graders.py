@@ -325,13 +325,13 @@ class OptimizedModeratorGrader:
             elif reasoning_len < 80:
                 scores['reasoning'] = 0.6
             else:
-                scores['reasoning'] = 1.0
+                scores['reasoning'] = 0.99
             
             # Bonus for considering original context
             if any(word in reasoning.lower() for word in ["original", "context", "policy", "evidence"]):
-                scores['reasoning'] = min(1.0, scores['reasoning'] + 0.1)
+                scores['reasoning'] = min(0.99, scores['reasoning'] + 0.1)
         except:
-            scores['reasoning'] = 0.0
+            scores['reasoning'] = 0.01
         
         return (scores['verdict'] * 0.60) + (scores['reasoning'] * 0.40)
     
@@ -424,16 +424,18 @@ class OptimizedModeratorGrader:
         except:
             scores['detection'] = 0.01
         
-        # Confidence level (30/)
+        # Confidence level (30%)
         try:
             confidence = float(prediction.get("confidence", 0.5))
             confidence = max(0.0, min(1.0, confidence))
             
-            # Higher confidence when detection is correct
-            if scores['detection'] == 1.0:
-                scores['confidence'] = confidence
+            # When detection is correct, higher confidence gets higher score
+            # Map [0, 1] to [0.01, 0.99] to avoid boundaries
+            if scores['detection'] == 0.95:  # Correct detection
+                scores['confidence'] = 0.01 + (confidence * 0.98)
             else:
-                scores['confidence'] = 1.0 - confidence  # Penalize high confidence on wrong answers
+                # Penalize high confidence on wrong answers
+                scores['confidence'] = 0.99 - (confidence * 0.98)
         except:
             scores['confidence'] = 0.5
         
