@@ -1,7 +1,7 @@
 ---
 title: Content Moderation Benchmark
 colorFrom: red
-colorTo: orange
+colorTo: pink
 sdk: docker
 pinned: true
 ---
