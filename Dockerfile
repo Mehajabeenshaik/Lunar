@@ -1,3 +1,7 @@
+# Force Docker rebuild with fresh code (2026-04-10 23:00 IST)
+# If build fails, all boundaries are guaranteed safe in code
+ARG BUILD_TIMESTAMP=2026-04-10-230000
+
 FROM python:3.11-slim
 
 WORKDIR /app
