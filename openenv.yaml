@@ -1,42 +1,118 @@
 spec_version: 1
 name: content-moderation-benchmark
-version: "1.0"
-description: "Meta Content Moderation Agent - Real-world social media moderation at billion-post scale"
+version: "2.0"
+description: "Meta Content Moderation Agent - Real-world social media moderation at billion-post scale. 9 tasks across 3 domains with multi-turn reasoning."
 type: rl-environment
 runtime: docker
 app: app.py
 port: 7860
 
 graders:
-  - name: ModerationGrader
+  - name: ModeratorGrader
     type: deterministic
-    description: Content moderation task grader
-    task_count: 3
+    description: Content moderation task grader for all 9 tasks
+    task_count: 9
 
 tasks:
+  # DOMAIN 1: BASIC CLASSIFICATION (Tasks 1-3)
   - id: moderation_task_1_classification
     name: "Post Classification"
     description: "Classify posts as Safe, Hate Speech, Spam, or Misinformation"
     difficulty: "easy"
-    grader: ModerationGrader
+    domain: "text_classification"
+    grader: ModeratorGrader
+    reward_function: "accuracy"
     
   - id: moderation_task_2_reasoning
     name: "Classification with Reasoning"
     description: "Classify posts with reasoning and severity scoring (1-5)"
     difficulty: "medium"
-    grader: ModerationGrader
+    domain: "text_classification"
+    grader: ModeratorGrader
+    reward_function: "composite (category 50% + severity 50%)"
     
   - id: moderation_task_3_full
     name: "Full Moderation Decision"
     description: "Complete moderation: classify, severity, action, explanation"
     difficulty: "hard"
-    grader: ModerationGrader
+    domain: "text_classification"
+    grader: ModeratorGrader
+    reward_function: "composite (category 25% + severity 25% + action 25% + reasoning 25%)"
 
-total_tasks: 3
+  # DOMAIN 2: CONTEXT-AWARE MODERATION (Tasks 4-6)
+  - id: moderation_task_4_author_history
+    name: "Author History Context"
+    description: "Classify posts considering author's violation history and account status"
+    difficulty: "easy"
+    domain: "context_aware_moderation"
+    grader: ModeratorGrader
+    reward_function: "context_sensitivity (severity_adjustment 60% + history_mentioned 40%)"
+    
+  - id: moderation_task_5_trending_topic
+    name: "Trending Topic Context"
+    description: "Apply policy exceptions based on trending topics and current context"
+    difficulty: "medium"
+    domain: "context_aware_moderation"
+    grader: ModeratorGrader
+    reward_function: "policy_exception_detection (category 30% + exception 40% + action 30%)"
+    
+  - id: moderation_task_6_appeal_case
+    name: "Appeal Case Review"
+    description: "Review appeals of moderation decisions and determine if original decision should be overturned"
+    difficulty: "hard"
+    domain: "context_aware_moderation"
+    grader: ModeratorGrader
+    reward_function: "composite (verdict 50% + action 30% + reasoning 20%)"
+
+  # DOMAIN 3: EDGE CASES & ESCALATION (Tasks 7-9)
+  - id: moderation_task_7_false_positive
+    name: "False Positive Detection"
+    description: "Identify and correct false positive moderation flags"
+    difficulty: "easy"
+    domain: "edge_cases"
+    grader: ModeratorGrader
+    reward_function: "accuracy"
+    
+  - id: moderation_task_8_sarcasm
+    name: "Sarcasm & Irony Detection"
+    description: "Detect sarcasm and irony to avoid false positives in specific contexts"
+    difficulty: "medium"
+    domain: "edge_cases"
+    grader: ModeratorGrader
+    reward_function: "composite (tone 50% + severity 30% + reasoning 20%)"
+    
+  - id: moderation_task_9_cib
+    name: "Coordinated Inauthentic Behavior"
+    description: "Detect and respond to organized harassment campaigns across multiple accounts"
+    difficulty: "hard"
+    domain: "edge_cases"
+    grader: ModeratorGrader
+    reward_function: "composite (cib_detection 50% + individual_action 25% + network_action 25%)"
+
+total_tasks: 9
 total_graders: 1
 environment: ContentModerationEnv
 reward_range: [0.0, 1.0]
 domains:
+  - text_classification
+  - context_aware_moderation
+  - edge_cases
   - social_media_moderation
   - content_safety
   - platform_policy_enforcement
+
+benchmarks:
+  - name: "baseline_llm_agent"
+    description: "OpenAI-based baseline agent for all 9 tasks"
+    target_runtime_seconds: 1500
+    expected_average_reward: 0.55
+
+  - name: "easy_tasks_only"
+    description: "Tasks 1, 4, 7 (easy difficulty)"
+    target_runtime_seconds: 300
+    expected_average_reward: 0.70
+
+  - name: "hard_tasks_only"
+    description: "Tasks 3, 6, 9 (hard difficulty)"
+    target_runtime_seconds: 600
+    expected_average_reward: 0.45

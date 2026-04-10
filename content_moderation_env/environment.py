@@ -8,7 +8,10 @@ from typing import Dict, Tuple, Optional, Any
 from datetime import datetime
 from .tasks import (
     Post, ContentCategory, ModerationAction,
-    Task1_Classification, Task2_ClassifyWithReasoning, Task3_FullModeration
+    Task1_Classification, Task2_ClassifyWithReasoning, Task3_FullModeration,
+    Task4_AuthorHistoryContext, Task5_TrendingTopicContext, Task6_AppealCase,
+    Task7_FalsePositiveDetection, Task8_SarcasmAndIrony, Task9_CoordinatedInauthenticBehavior,
+    ALL_TASKS
 )
 
 
@@ -83,15 +86,11 @@ class ContentModerationEnv:
         self.max_steps = 100
         self.rewards_history = []
         
-        # Select task
-        if task_id == 1:
-            self.current_task = Task1_Classification
-        elif task_id == 2:
-            self.current_task = Task2_ClassifyWithReasoning
-        elif task_id == 3:
-            self.current_task = Task3_FullModeration
-        else:
-            raise ValueError(f"Invalid task_id: {task_id}. Must be 1, 2, or 3")
+        # Select task from ALL_TASKS registry (1-9)
+        if task_id not in ALL_TASKS:
+            raise ValueError(f"Invalid task_id: {task_id}. Must be 1-9")
+        
+        self.current_task = ALL_TASKS[task_id]
     
     def _generate_session_id(self) -> str:
         """Generate unique session ID"""
@@ -134,38 +133,22 @@ class ContentModerationEnv:
         self.steps += 1
         done = self.steps >= self.max_steps
         
-        # Calculate reward based on task
-        if self.task_id == 1:
-            # Easy: Just classification
-            reward = Task1_Classification.calculate_reward(
-                action.get("category", ""),
-                self.current_post.ground_truth_category
-            )
+        # Calculate reward based on task using graders
+        from .graders import ModeratorGrader
         
-        elif self.task_id == 2:
-            # Medium: Classification + Reasoning + Severity
-            reward = Task2_ClassifyWithReasoning.calculate_reward(
-                action.get("category", ""),
-                action.get("severity", 0),
-                self.current_post.ground_truth_category,
-                3 if self.current_post.ground_truth_category != ContentCategory.SAFE else 1
-            )
+        # Ground truth data for this post
+        ground_truth = {
+            "category": self.current_post.ground_truth_category.value,
+            "severity": 3 if self.current_post.ground_truth_category != ContentCategory.SAFE else 1,
+            "action": self._get_ground_truth_action(self.current_post.ground_truth_category).value
+        }
         
-        else:  # task_id == 3
-            # Hard: Full moderation
-            # Determine ground truth action based on category and severity
-            ground_truth_action = self._get_ground_truth_action(
-                self.current_post.ground_truth_category
-            )
-            
-            reward = Task3_FullModeration.calculate_reward(
-                action.get("category", ""),
-                action.get("severity", 0),
-                action.get("action", ""),
-                self.current_post.ground_truth_category,
-                3 if self.current_post.ground_truth_category != ContentCategory.SAFE else 1,
-                ground_truth_action
-            )
+        try:
+            grader = ModeratorGrader.get_grader_for_task(self.task_id)
+            reward = grader(action, ground_truth)
+        except Exception as e:
+            # Graceful degradation: if grading fails, give partial credit
+            reward = 0.5 if any(action.values()) else 0.0
         
         self.rewards_history.append(reward)
         
