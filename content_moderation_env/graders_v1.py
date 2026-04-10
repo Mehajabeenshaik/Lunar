@@ -21,7 +21,7 @@ class ModeratorGrader:
         try:
             predicted_cat = prediction.get("category", "").lower()
             true_cat = ground_truth.get("category", "").lower()
-            return 0.99 if predicted_cat == true_cat else 0.0
+            return 0.99 if predicted_cat == true_cat else 0.01
         except Exception:
             return 0.01
     
@@ -38,7 +38,7 @@ class ModeratorGrader:
         try:
             predicted_cat = prediction.get("category", "").lower()
             true_cat = ground_truth.get("category", "").lower()
-            scores['category'] = 0.99 if predicted_cat == true_cat else 0.0
+            scores['category'] = 0.99 if predicted_cat == true_cat else 0.01
         except Exception:
             scores['category'] = 0.01
         
@@ -72,7 +72,7 @@ class ModeratorGrader:
         try:
             predicted_cat = prediction.get("category", "").lower()
             true_cat = ground_truth.get("category", "").lower()
-            scores['category'] = 0.99 if predicted_cat == true_cat else 0.0
+            scores['category'] = 0.99 if predicted_cat == true_cat else 0.01
         except Exception:
             scores['category'] = 0.01
         
@@ -95,7 +95,7 @@ class ModeratorGrader:
         try:
             predicted_act = prediction.get("action", "").lower()
             true_act = ground_truth.get("action", "").lower()
-            scores['action'] = 0.99 if predicted_act == true_act else 0.0
+            scores['action'] = 0.99 if predicted_act == true_act else 0.01
         except Exception:
             scores['action'] = 0.01
         
@@ -104,7 +104,7 @@ class ModeratorGrader:
             reasoning = prediction.get("reasoning", "")
             # Bonus: longer reasoning (generally better quality)
             reasoning_length = len(str(reasoning).strip())
-            scores['reasoning'] = min(1.0, reasoning_length / 100.0) if reasoning_length > 20 else 0.5
+            scores['reasoning'] = min(0.99, reasoning_length / 100.0) if reasoning_length > 20 else 0.5
         except Exception:
             scores['reasoning'] = 0.01
         
@@ -142,7 +142,7 @@ class ModeratorGrader:
             reasoning = str(prediction.get("reasoning", "")).lower()
             history_mentioned = any(word in reasoning for word in 
                                    ["history", "prior", "violations", "previous", "record"])
-            scores['reasoning'] = 0.99 if history_mentioned else 0.0
+            scores['reasoning'] = 0.99 if history_mentioned else 0.01
         except Exception:
             scores['reasoning'] = 0.01
         
@@ -163,7 +163,7 @@ class ModeratorGrader:
         try:
             predicted_cat = prediction.get("category", "").lower()
             true_cat = ground_truth.get("category", "").lower()
-            scores['category'] = 0.99 if predicted_cat == true_cat else 0.0
+            scores['category'] = 0.99 if predicted_cat == true_cat else 0.01
         except Exception:
             scores['category'] = 0.01
         
@@ -171,7 +171,7 @@ class ModeratorGrader:
         try:
             predicted_exception = prediction.get("policy_exception", "").lower()
             true_exception = ground_truth.get("policy_exception", "").lower()
-            scores['exception'] = 0.99 if predicted_exception == true_exception else 0.5 if predicted_exception else 0.0
+            scores['exception'] = 0.99 if predicted_exception == true_exception else 0.5 if predicted_exception else 0.01
         except Exception:
             scores['exception'] = 0.01
         
@@ -186,7 +186,7 @@ class ModeratorGrader:
             else:
                 correct_action = true_act
             
-            scores['action'] = 0.99 if predicted_act == correct_action else 0.0
+            scores['action'] = 0.99 if predicted_act == correct_action else 0.01
         except Exception:
             scores['action'] = 0.01
         
@@ -207,7 +207,7 @@ class ModeratorGrader:
         try:
             predicted_verdict = prediction.get("appeal_verdict", "").lower()
             true_verdict = ground_truth.get("appeal_verdict", "").lower()
-            scores['verdict'] = 0.99 if predicted_verdict == true_verdict else 0.0
+            scores['verdict'] = 0.99 if predicted_verdict == true_verdict else 0.01
         except Exception:
             scores['verdict'] = 0.01
         
@@ -226,7 +226,7 @@ class ModeratorGrader:
             good_reason = any(word in reasoning for word in 
                             ["context", "evidence", "similar", "precedent", "misclassification", "legitimate"])
             reasoning_length = len(reasoning.strip())
-            scores['reasoning'] = 0.99 if (good_reason and reasoning_length > 30) else 0.5 if reasoning_length > 30 else 0.0
+            scores['reasoning'] = 0.99 if (good_reason and reasoning_length > 30) else 0.5 if reasoning_length > 30 else 0.01
         except Exception:
             scores['reasoning'] = 0.01
         
@@ -244,7 +244,7 @@ class ModeratorGrader:
         try:
             predicted = prediction.get("is_false_positive", False)
             true = ground_truth.get("is_false_positive", False)
-            return 0.99 if predicted == true else 0.0
+            return 0.99 if predicted == true else 0.01
         except Exception:
             return 0.01
     
@@ -263,7 +263,7 @@ class ModeratorGrader:
         try:
             predicted_tone = prediction.get("tone", "").lower()
             true_tone = ground_truth.get("tone", "").lower()
-            scores['tone'] = 0.99 if predicted_tone == true_tone else 0.0
+            scores['tone'] = 0.99 if predicted_tone == true_tone else 0.01
         except Exception:
             scores['tone'] = 0.01
         
@@ -277,7 +277,7 @@ class ModeratorGrader:
                 scores['severity'] = 0.99
             else:
                 severity_diff = abs(predicted_sev - true_sev)
-                scores['severity'] = 0.99 if severity_diff == 0 else 0.5 if severity_diff == 1 else 0.0
+                scores['severity'] = 0.99 if severity_diff == 0 else 0.5 if severity_diff == 1 else 0.01
         except Exception:
             scores['severity'] = 0.01
         
@@ -308,7 +308,7 @@ class ModeratorGrader:
         try:
             predicted_cib = prediction.get("coordinated_inauthentic", False)
             true_cib = ground_truth.get("coordinated_inauthentic", False)
-            scores['cib'] = 0.99 if predicted_cib == true_cib else 0.0
+            scores['cib'] = 0.99 if predicted_cib == true_cib else 0.01
         except Exception:
             scores['cib'] = 0.01
         
@@ -329,7 +329,7 @@ class ModeratorGrader:
             if predicted_net in ["investigate_network", "escalate_to_team"]:
                 scores['network'] = 0.99 if true_net in ["investigate_network", "escalate_to_team"] else 0.5
             else:
-                scores['network'] = 0.99 if predicted_net == true_net else 0.0
+                scores['network'] = 0.99 if predicted_net == true_net else 0.01
         except Exception:
             scores['network'] = 0.01
         
