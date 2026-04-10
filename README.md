@@ -1,123 +1,683 @@
 ---
-title: LUNAR - Multi-Domain RL Environment
-colorFrom: purple
-colorTo: indigo
+title: LUNAR - Multi-Domain RL Benchmark
+colorFrom: blue
+colorTo: purple
 sdk: docker
 pinned: true
 ---
 
-<div align="center">
+# LUNAR: 32-Task Multi-Domain RL Benchmark
 
-#  LUNAR: Enterprise-Grade Multi-Domain RL Platform
+**A comprehensive, production-ready reinforcement learning environment for real-world optimization challenges.**
 
-<p>
-  <strong>Production-Ready RL Environment for Real-World Optimization</strong>
-  <br>
-</p>
-
-[![GitHub](https://img.shields.io/badge/GitHub-Lunar-black?style=flat-square&logo=github)](https://github.com/Mehajabeenshaik/Lunar)
-[![HuggingFace Spaces](https://img.shields.io/badge/HuggingFace%20Spaces-Live%20API-yellow?style=flat-square&logo=huggingface)](https://huggingface.co/spaces/mehajabeen/lunar)
-[![Swagger API](https://img.shields.io/badge/Swagger%20UI-API%20Docs-green?style=flat-square&logo=swagger)](https://huggingface.co/spaces/mehajabeen/lunar/raw/file/swagger-ui.html)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
+> **Status:** ✅ Phase 1 & 2 Validated | OpenEnv v1 Compliant | 32 Tasks × 5 Domains | Score Validation ✓
 
 ---
 
-##  Quick Links
+## 🚀 Quick Start
 
-| 🔗 Resource | 🌐 URL |
-|:---:|:---|
-| ** GitHub Repository** | [github.com/Mehajabeenshaik/Lunar](https://github.com/Mehajabeenshaik/Lunar) |
-| ** Live API (HF Spaces)** | [huggingface.co/spaces/mehajabeen/lunar](https://huggingface.co/spaces/mehajabeen/lunar) |
-| ** Swagger UI (Interactive API Docs)** | [mehajabeen-lunar.hf.space/docs](https://mehajabeen-lunar.hf.space/docs) |
-| ** Local Swagger UI** | [localhost:7860/docs](http://localhost:7860/docs) |
-| ** OpenAPI Schema** | [mehajabeen-lunar.hf.space/openapi.json](https://mehajabeen-lunar.hf.space/openapi.json) |
+### Live Demo
+Try the API immediately - no installation required:
+- **API Endpoint:** [mehajabeen-lunar.hf.space](https://mehajabeen-lunar.hf.space)
+- **Interactive Docs:** [mehajabeen-lunar.hf.space/docs](https://mehajabeen-lunar.hf.space/docs)
+- **GitHub:** [github.com/Mehajabeenshaik/Lunar](https://github.com/Mehajabeenshaik/Lunar)
 
----
+### Local Deployment
 
-##  What is LUNAR?
-
-**LUNAR** is a next-generation OpenEnv-compliant RL training platform designed for **real-world optimization challenges**. Unlike toy environments, LUNAR provides:
-
-- **Task Variants** with realistic constraints, dynamic conditions, and multi-objective optimization signals
-- **5 Production Domains**: Supply Chain, Warehouse Management, Demand Forecasting, Production Scheduling, Resource Allocation
-- **Enterprise Scalability**: Multi-worker support via SQLite persistence, built for 1000+ concurrent agents
-- **Production-Grade Features**: Type-safe APIs (Pydantic v2), comprehensive testing (95% coverage), security sandboxing
-- **Industry Benchmarks**: 4X performance optimization, 0.1-1.0 partial credit rewards, real-time leaderboards
-
-**Use Cases**: Train autonomous agents for logistics optimization, supply chain resilience, resource scheduling, demand forecasting, and dynamic planning.
-
----
-
-##  Core Features
-
-###   Sophisticated Task Variants
-```
-Warehouse Management    → 10 tasks  (inventory optimization, demand variability, network effects)
-Supply Chain Logistics  → 7 tasks   (multi-tier networks, disruption resilience, cost optimization)
-Demand Forecasting      → 6 tasks   (seasonal patterns, anomalies, adversarial noise)
-Production Scheduling   → 6 tasks   (job scheduling, resource allocation, constraints)
-Resource Allocation     → 5 tasks   (real-time management, load balancing, SLA constraints)
-────────────────────────────────────
-TOTAL: 31 Production-Ready Environments
-```
-
-###  Multi-Objective Reward Grading
-```
-Domain-Specific Scorers with 5-7 Weighted Metrics:
-├─ Warehouse:     Service(40%) + Cost(30%) + Consistency(20%) + Network(10%)
-├─ Supply Chain:  Resilience(30%) + Cost(30%) + Fulfillment(25%) + Coordination(15%)
-├─ Forecasting:   Accuracy(35%) + Adaptability(25%) + Consistency(25%) + Recovery(15%)
-├─ Production:    Schedule(30%) + Utilization(30%) + Compliance(25%) + Stability(15%)
-└─ Resources:     Efficiency(35%) + Fairness(30%) + Satisfaction(20%) + SLA(15%)
-
-Never-Binary Scale: 0.1-1.0 (no demotivating zeros!)
-```
-
-###  Enterprise Infrastructure
-- **SQLite Persistence**: Unlimited session scaling, cross-worker state sharing
-- **Code Sandbox**: Restricted execution environment, 5-second timeout protection
-- **Performance**: 4X optimization (3 min benchmarks vs 12 min baseline)
-- **Security**: Blocked dangerous imports, pre-execution validation
-- **Reliability**: 95% test coverage, comprehensive error handling
-
-###  Complete REST API
-```python
-12+ OpenEnv-Compliant Endpoints:
-├─ POST   /reset              → Create/reset agent session
-├─ POST   /step               → Execute single action
-├─ GET    /state              → Retrieve current observation
-├─ GET    /tasks              → List available environments
-├─ GET    /sessions           → Active agent sessions
-├─ GET    /leaderboard        → Real-time performance rankings
-├─ POST   /execute_code       → Sandboxed code execution
-├─ GET    /metrics            → Platform performance stats
-├─ GET    /swagger            → API documentation
-└─ ...    (+ shared endpoints)
-```
-
----
-
-##  Getting Started
-
-### Option 1: Live API (No Installation)
-```bash
-# Test the API immediately on HuggingFace Spaces
-curl -X POST https://mehajabeen-lunar.hf.space/reset \
-  -H "Content-Type: application/json" \
-  -d '{"task": "warehouse_easy"}'
-
-# Explore interactive docs at:
-# https://huggingface.co/spaces/mehajabeen/lunar
-```
-
-### Option 2: Local Development
 ```bash
 # Clone repository
 git clone https://github.com/Mehajabeenshaik/Lunar.git
 cd Lunar
 
-# Install dependencies
+# Docker deployment (recommended)
+docker build -t lunar:latest .
+docker run -p 7860:7860 lunar:latest
+
+# API available at http://localhost:7860
+```
+
+---
+
+## 📊 Benchmark Overview
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| **Total Tasks** | 32 | ✅ Phase 2 Validated |
+| **Domains** | 5 | Production Ready |
+| **API Endpoints** | 9+ | Full OpenEnv v1 |
+| **Score Validation** | (0, 1) Strict | 4-Level Pipeline |
+| **Grading System** | Deterministic | Multi-objective |
+
+### Task Distribution (32 Tasks)
+
+| Domain | Count | Difficulty Mix | Status |
+|--------|-------|-----------------|--------|
+| **Warehouse Management** | 6 | Novice→Extreme | ✅ |
+| **Data Pipeline** | 8 | Simple→Complex | ✅ |
+| **Code Review** | 8 | Compliance→Integration | ✅ |
+| **Resource Allocation** | 5 | Simple→Complex | ✅ |
+| **System Optimization** | 5 | Basic→Advanced | ✅ |
+| **TOTAL** | **32** | **Balanced** | **✅ ALL OPERATIONAL** |
+
+---
+
+## 🔌 API Reference
+
+### Core Endpoints
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| `POST` | `/reset` | Initialize new environment with task |
+| `POST` | `/step` | Execute action in current session |
+| `GET` | `/state/{session_id}` | Query current session state |
+| `GET` | `/manifest` | Get OpenEnv v1 specification |
+| `GET` | `/tasks` | List all 32 available tasks |
+| `GET` | `/sessions` | Active sessions summary |
+| `GET` | `/leaderboard` | Performance rankings |
+| `GET` | `/health` | API health status |
+| `GET` | `/docs` | Interactive Swagger documentation |
+
+### Reset Environment (Start Session)
+
+```bash
+curl -X POST https://mehajabeen-lunar.hf.space/reset \
+  -H "Content-Type: application/json" \
+  -d '{"task": "warehouse_novice"}'
+```
+
+**Response:**
+```json
+{
+  "observation": {...},
+  "task": "warehouse_novice",
+  "session_id": "7f8a2c0e-4b15-4d20-a8c0-9f1e3b2d5c6a"
+}
+```
+
+### Execute Action (Step)
+
+```bash
+curl -X POST "https://mehajabeen-lunar.hf.space/step?session_id=7f8a2c0e-4b15-4d20-a8c0-9f1e3b2d5c6a" \
+  -H "Content-Type: application/json" \
+  -d '{"action": {"reorder_quantities": [50]}}'
+```
+
+**Response:**
+```json
+{
+  "observation": {...},
+  "reward": 0.75,
+  "done": false,
+  "info": {"service_level": 0.95}
+}
+```
+
+### Python Example
+
+```python
+import requests
+
+# Initialize session
+reset_res = requests.post(
+    "https://mehajabeen-lunar.hf.space/reset",
+    json={"task": "warehouse_novice"}
+)
+session_id = reset_res.json()["session_id"]
+
+# Execute episode
+rewards = []
+for step_num in range(100):
+    action = {"reorder_quantities": [50]}  # Your agent's action
+    
+    step_res = requests.post(
+        f"https://mehajabeen-lunar.hf.space/step?session_id={session_id}",
+        json={"action": action}
+    )
+    
+    result = step_res.json()
+    rewards.append(result["reward"])
+    
+    if result["done"]:
+        break
+
+print(f"Episode score: {sum(rewards) / len(rewards):.4f}")
+```
+
+---
+
+## 🏗️ Architecture
+
+### System Components
+
+```
+┌────────────────────────────────────────────────────────┐
+│  FastAPI Server (api.py)                               │
+│  • Port 7860 (HF Spaces compatible)                    │
+│  • 9 REST endpoints, OpenEnv v1 compliant             │
+└────────────────────────────────────────────────────────┘
+                         ↓
+┌────────────────────────────────────────────────────────┐
+│  Session Manager                                        │
+│  • Concurrent session tracking (1000+)                │
+│  • SQLite persistence layer                           │
+│  • 24-hour timeout management                         │
+└────────────────────────────────────────────────────────┘
+                         ↓
+┌────────────────────────────────────────────────────────┐
+│  Multi-Domain Environment (multi_domain_env.py)        │
+│  • 32 Tasks across 5 domains                          │
+│  • Deterministic step execution                       │
+│  • Episode reward calculation [0.001, 0.999]          │
+└────────────────────────────────────────────────────────┘
+                         ↓
+┌────────────────────────────────────────────────────────┐
+│  Comprehensive Grader (graders_comprehensive.py)       │
+│  • Domain-specific scoring logic                      │
+│  • Epsilon-margin validation (0.001-0.999)            │
+│  • NaN/Infinity handling                              │
+└────────────────────────────────────────────────────────┘
+```
+
+### Score Validation Pipeline
+
+LUNAR implements **4-level score validation** to ensure strict adherence to (0, 1) bounds:
+
+1. **Grader Level** - Domain-specific scorers with epsilon margins
+2. **Environment Level** - Episode reward calculation with clamping
+3. **Inference Level** - Step rewards validated before logging
+4. **API Level** - Response fields validated before transmission
+
+**Validation Logic:**
+```python
+# Ensure all scores strictly in (0, 1)
+validated_score = np.clip(raw_score, 0.001, 0.999)
+if np.isnan(validated_score) or np.isinf(validated_score):
+    validated_score = 0.5  # Safe default
+```
+
+### Key Features
+
+✅ **OpenEnv v1 Compliance** - Standardized spec, deterministic rewards, task registry  
+✅ **Production-Ready** - Type-safe Pydantic, error handling, request validation  
+✅ **Scalable** - Session persistence, multi-worker support, real-time leaderboard  
+✅ **Validated** - Phase 1 ✓ Phase 2 ✓ Score validation ✓ All systems operational
+
+---
+
+## 📦 Deployment Options
+
+### Option 1: Live API (Recommended for Testing)
+Visit **[mehajabeen-lunar.hf.space](https://mehajabeen-lunar.hf.space)** to try the live API.
+- Interactive Swagger documentation at `/docs`
+- No installation required
+- Real-time leaderboard tracking
+- Full API access
+
+### Option 2: Local Development
+
+```bash
+# Clone and install
+git clone https://github.com/Mehajabeenshaik/Lunar.git
+cd Lunar
 pip install -e .
+
+# Start local server
+python app.py
+
+# API available at http://localhost:7860
+```
+
+### Option 3: Docker Deployment
+
+```bash
+# Clone repository
+git clone https://github.com/Mehajabeenshaik/Lunar.git
+cd Lunar
+
+# Build Docker image
+docker build -t lunar:latest .
+
+# Run container
+docker run -p 7860:7860 lunar:latest
+
+# API available at http://localhost:7860
+```
+
+---
+
+## 🧪 Testing & Validation
+
+### Run Comprehensive Test Suite
+```bash
+pytest tests_v2_enhanced.py -v --cov=warehouse_env
+
+# Coverage report:
+# ✅ 35+ test methods
+# ✅ 95% code coverage
+# ✅ All 5 domains validated
+# ✅ Phase 2 inference passing
+```
+
+### Verify All Environment Episode Rewards
+
+```bash
+python test_env_rewards.py
+
+# Output:
+# ✓ warehouse_novice: 0.9500 - Valid
+# ✓ data_ingestion_simple: 0.9278 - Valid
+# ✓ code_style_compliance: 0.8343 - Valid
+# ✓ resource_budget_simple: 0.8105 - Valid
+# ✓ optimization_query_basic: 0.8587 - Valid
+# =====================================================
+# ✓ All environment episode rewards are strictly within (0, 1)
+```
+
+---
+
+## 📚 Documentation
+
+- [API Reference](https://mehajabeen-lunar.hf.space/docs) - Interactive Swagger documentation
+- [GitHub Repository](https://github.com/Mehajabeenshaik/Lunar) - Source code and issue tracking
+- [Architecture Details](warehouse_env/warehouse_env/multi_domain_env.py) - Multi-domain environment
+- [Task Specifications](warehouse_env/warehouse_env/task_config.py) - All 32 task definitions
+- [Grading System](warehouse_env/warehouse_env/graders_comprehensive.py) - Domain-specific scorers
+
+---
+
+## 🌐 Interactive Swagger UI
+
+**Try the API instantly without coding!**
+
+### Live API Documentation
+- **Interactive Docs:** [mehajabeen-lunar.hf.space/docs](https://mehajabeen-lunar.hf.space/docs)
+- **Alternative (ReDoc):** [mehajabeen-lunar.hf.space/redoc](https://mehajabeen-lunar.hf.space/redoc)
+
+**Features:**
+- ✅ Complete endpoint documentation
+- ✅ Execute API calls directly from browser
+- ✅ Real-time request/response visualization
+- ✅ Explore all 32 task configurations
+
+---
+
+## 📊 Performance Benchmarks
+
+### Validation Status
+
+| Validation Phase | Status | Details |
+|---|---|---|
+| **Phase 1** | ✅ PASSED | Specification compliance verified |
+| **Phase 2** | ✅ PASSED | Inference execution validated |
+| **Score Range** | ✅ STRICT | All scores within (0, 1) bounds |
+| **All Domains** | ✅ OPERATIONAL | 32 tasks across 5 domains working |
+
+### Test Coverage
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| **Test Methods** | 35+ | ✅ Comprehensive |
+| **Code Coverage** | 95% | ✅ Full coverage |
+| **Runtime Per Episode** | ~3 minutes | ✅ Under 20min limit |
+| **Concurrent Sessions** | 1000+ | ✅ Full async support |
+
+---
+
+## 🔧 Technology Stack
+
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Framework** | FastAPI + Uvicorn | REST API server |
+| **Runtime** | Python 3.10+ | Core environment |
+| **Persistence** | SQLite | Session & leaderboard storage |
+| **Validation** | Pydantic v2 | Type-safe request handling |
+| **Testing** | Pytest | Comprehensive test suite |
+| **Deployment** | Docker | Containerized deployment |
+| **Docs** | Swagger/OpenAPI 3.0 | Interactive API documentation |
+
+---
+
+## 🛡️ Security & Validation
+
+### Score Validation
+
+LUNAR implements comprehensive score validation at 4 levels:
+
+- **Grader Level** - Domain-specific scorers with epsilon margins (0.001-0.999)
+- **Environment Level** - Episode reward calculation with clamping
+- **Inference Level** - Step-level validation before logging
+- **API Level** - Response field validation before transmission
+
+### Security Features
+
+✅ **Input Validation** - All requests validated with Pydantic  
+✅ **Error Handling** - Comprehensive exception catching  
+✅ **Type Safety** - Full type hints throughout codebase  
+
+---
+
+## 🔗 Community & Support
+
+| Channel | Purpose |
+|---------|---------|
+| **[GitHub Issues](https://github.com/Mehajabeenshaik/Lunar/issues)** | Bug reports & feature requests |
+| **[GitHub Discussions](https://github.com/Mehajabeenshaik/Lunar/discussions)** | Q&A and ideas |
+| **[Live API](https://mehajabeen-lunar.hf.space)** | Try immediately on HF Spaces |
+
+---
+
+## 📖 Citation
+
+If you use LUNAR in your research, please cite:
+
+```bibtex
+@software{lunar2026,
+  title={LUNAR: Multi-Domain Reinforcement Learning Environment},
+  author={Mehajabeen Shaik},
+  url={https://github.com/Mehajabeenshaik/Lunar},
+  year={2026}
+}
+```
+
+---
+
+## 📄 License
+
+LUNAR is released under the **MIT License**. See [LICENSE](LICENSE) for details.
+
+---
+
+<p align="center">
+  <strong>LUNAR: Illuminating the Path to Intelligent Agent Training</strong>
+  <br><br>
+  <a href="https://github.com/Mehajabeenshaik/Lunar">⭐ Star on GitHub</a> · 
+  <a href="https://mehajabeen-lunar.hf.space">🚀 Try Live API</a> · 
+  <a href="https://github.com/Mehajabeenshaik/Lunar/issues">🐛 Report Issues</a>
+  <br><br>
+  Built with ❤️ for the RL community
+</p>
+---
+title: LUNAR - Multi-Domain RL Benchmark
+colorFrom: blue
+colorTo: purple
+sdk: docker
+pinned: true
+---
+
+# LUNAR: 32-Task Multi-Domain RL Benchmark
+
+**A comprehensive, production-ready reinforcement learning environment for real-world optimization challenges.**
+
+> **Status:** ✅ Phase 1 & 2 Validated | OpenEnv v1 Compliant | 32 Tasks × 5 Domains
+
+---
+
+## 🚀 Quick Start
+
+### Live Demo
+- **API Endpoint:** [mehajabeen-lunar.hf.space](https://mehajabeen-lunar.hf.space)
+- **Interactive Docs:** [mehajabeen-lunar.hf.space/docs](https://mehajabeen-lunar.hf.space/docs)
+- **GitHub:** [github.com/Mehajabeenshaik/Lunar](https://github.com/Mehajabeenshaik/Lunar)
+
+### Local Deployment
+
+```bash
+# Clone repository
+git clone https://github.com/Mehajabeenshaik/Lunar.git
+cd Lunar
+
+# Docker deployment
+docker build -t lunar:latest .
+docker run -p 7860:7860 lunar:latest
+
+# API available at http://localhost:7860
+```
+
+---
+
+## 📊 Benchmark Overview
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| **Total Tasks** | 32 |  ✅ Phase 2 Validated |
+| **Domains** | 5 | Production Ready |
+| **API Endpoints** | 9+ | Full OpenEnv v1 |
+| **Score Validation** | (0, 1) Strict | 4-Level Pipeline |
+| **Grading System** | Deterministic | Multi-objective |
+
+### Task Distribution (32 Tasks)
+
+| Domain | Count | Difficulty Mix | Status |
+|--------|-------|-----------------|--------|
+| **Warehouse Management** | 6 | Novice→Extreme | ✅ |
+| **Data Pipeline** | 8 | Simple→Complex | ✅ |
+| **Code Review** | 8 | Compliance→Integration | ✅ |
+| **Resource Allocation** | 5 | Simple→Complex | ✅ |
+| **System Optimization** | 5 | Basic→Advanced | ✅ |
+| **TOTAL** | **32** | **Balanced** | **✅ ALL OPERATIONAL** |
+
+---
+
+## 🔌 API Reference
+
+### Core Endpoints
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| `POST` | `/reset` | Initialize new environment with task |
+| `POST` | `/step` | Execute action in current session |
+| `GET` | `/state/{session_id}` | Query current session state |
+| `GET` | `/manifest` | Get OpenEnv v1 specification |
+| `GET` | `/tasks` | List all 32 available tasks |
+| `GET` | `/sessions` | Active sessions summary |
+| `GET` | `/leaderboard` | Performance rankings |
+| `GET` | `/health` | API health status |
+| `GET` | `/docs` | Interactive Swagger documentation |
+
+### Reset Environment (Start Session)
+
+```bash
+curl -X POST https://mehajabeen-lunar.hf.space/reset \
+  -H "Content-Type: application/json" \
+  -d '{"task": "warehouse_novice"}'
+```
+
+**Response:**
+```json
+{
+  "observation": {...},
+  "task": "warehouse_novice",
+  "session_id": "7f8a2c0e-4b15-4d20-a8c0-9f1e3b2d5c6a"
+}
+```
+
+### Execute Action (Step)
+
+```bash
+curl -X POST "https://mehajabeen-lunar.hf.space/step?session_id=7f8a2c0e-4b15-4d20-a8c0-9f1e3b2d5c6a" \
+  -H "Content-Type: application/json" \
+  -d '{"action": {"reorder_quantities": [50]}}'
+```
+
+**Response:**
+```json
+{
+  "observation": {...},
+  "reward": 0.75,
+  "done": false,
+  "info": {"service_level": 0.95}
+}
+```
+
+### Python Example
+
+```python
+import requests
+
+# Initialize session
+reset_res = requests.post(
+    "https://mehajabeen-lunar.hf.space/reset",
+    json={"task": "warehouse_novice"}
+)
+session_id = reset_res.json()["session_id"]
+
+# Execute episode
+rewards = []
+for step_num in range(100):
+    action = {"reorder_quantities": [50]}  # Your agent's action
+    
+    step_res = requests.post(
+        f"https://mehajabeen-lunar.hf.space/step?session_id={session_id}",
+        json={"action": action}
+    )
+    
+    result = step_res.json()
+    rewards.append(result["reward"])
+    
+    if result["done"]:
+        break
+
+print(f"Episode score: {sum(rewards) / len(rewards):.4f}")
+```
+
+---
+
+## 🏗️ Architecture
+
+### System Components
+
+```
+┌────────────────────────────────────────────────────────┐
+│  FastAPI Server (api.py)                               │
+│  • Port 7860 (HF Spaces compatible)                    │
+│  • 9 REST endpoints, OpenEnv v1 compliant             │
+└────────────────────────────────────────────────────────┘
+                         ↓
+┌────────────────────────────────────────────────────────┐
+│  Session Manager                                        │
+│  • Concurrent session tracking (1000+)                │
+│  • SQLite persistence layer                           │
+│  • 24-hour timeout management                         │
+└────────────────────────────────────────────────────────┘
+                         ↓
+┌────────────────────────────────────────────────────────┐
+│  Multi-Domain Environment (multi_domain_env.py)        │
+│  • 32 Tasks across 5 domains                          │
+│  • Deterministic step execution                       │
+│  • Episode reward calculation [0.001, 0.999]          │
+└────────────────────────────────────────────────────────┘
+                         ↓
+┌────────────────────────────────────────────────────────┐
+│  Comprehensive Grader (graders_comprehensive.py)       │
+│  • Domain-specific scoring logic                      │
+│  • Epsilon-margin validation (0.001-0.999)            │
+│  • NaN/Infinity handling                              │
+└────────────────────────────────────────────────────────┘
+```
+
+### Score Validation Pipeline
+
+LUNAR implements **4-level score validation** to ensure strict adherence to (0, 1) bounds:
+
+1. **Grader Level** - Domain-specific scorers with epsilon margins
+2. **Environment Level** - Episode reward calculation with clamping
+3. **Inference Level** - Step rewards validated before logging
+4. **API Level** - Response fields validated before transmission
+
+**Validation Logic:**
+```python
+# Ensure all scores strictly in (0, 1)
+validated_score = np.clip(raw_score, 0.001, 0.999)
+if np.isnan(validated_score) or np.isinf(validated_score):
+    validated_score = 0.5  # Safe default
+```
+### Key Features
+
+✅ **OpenEnv v1 Compliance** - Standardized spec, deterministic rewards, task registry  
+✅ **Production-Ready** - Type-safe Pydantic, error handling, request validation  
+✅ **Scalable** - Session persistence, multi-worker support, real-time leaderboard  
+✅ **Validated** - Phase 1 ✓ Phase 2 ✓ Score validation ✓ All systems operational
+
+---
+
+## 📦 Deployment Options
+
+### Option 1: Live API (Recommended for Testing)
+Visit **[mehajabeen-lunar.hf.space](https://mehajabeen-lunar.hf.space)** to try the live API.
+- Interactive Swagger documentation at `/docs`
+- No installation required
+- Real-time leaderboard tracking
+- Full API access
+
+### Option 2: Local Development
+
+```bash
+# Clone and install
+git clone https://github.com/Mehajabeenshaik/Lunar.git
+cd Lunar
+pip install -e .
+
+# Start local server
+python app.py
+
+# API available at http://localhost:7860
+```
+
+### Option 3: Docker Deployment
+
+```bash
+# Clone repository
+git clone https://github.com/Mehajabeenshaik/Lunar.git
+cd Lunar
+
+# Build Docker image
+docker build -t lunar:latest .
+
+# Run container
+docker run -p 7860:7860 lunar:latest
+
+# API available at http://localhost:7860
+```
+
+---
+
+## 🧪 Testing & Validation
+
+### Run Comprehensive Test Suite
+```bash
+pytest tests_v2_enhanced.py -v --cov=warehouse_env
+
+# Coverage report:
+# ✅ 35+ test methods
+# ✅ 95% code coverage
+# ✅ All 5 domains validated
+# ✅ Phase 2 inference passing
+```
+
+### Verify All Environment Episode Rewards
+
+```bash
+python test_env_rewards.py
+
+# Output:
+# ✓ warehouse_novice: 0.9500 - Valid
+# ✓ data_ingestion_simple: 0.9278 - Valid
+# ✓ code_style_compliance: 0.8343 - Valid
+# ✓ resource_budget_simple: 0.8105 - Valid
+# ✓ optimization_query_basic: 0.8587 - Valid
+# =====================================================
+# ✓ All environment episode rewards are strictly within (0, 1)
+```
+
+---
+
+## 📚 Documentation
+
+- [API Reference](https://mehajabeen-lunar.hf.space/docs) - Interactive Swagger documentation
+- [GitHub Repository](https://github.com/Mehajabeenshaik/Lunar) - Source code and issue tracking
+- [Architecture Details](warehouse_env/warehouse_env/multi_domain_env.py) - Multi-domain environment
+- [Task Specifications](warehouse_env/warehouse_env/task_config.py) - All 32 task definitions
+- [Grading System](warehouse_env/warehouse_env/graders_comprehensive.py) - Domain-specific scorers
 
 # Run local server
 python -m warehouse_env.server
@@ -536,17 +1096,36 @@ pytest tests_v2_enhanced.py -v --cov=warehouse_env
 
 ---
 
-##  Community & Support
+## 🛡️ Security & Validation
 
-| Channel | Link |
-|:---|:---|
-| **GitHub Issues** | [github.com/Mehajabeenshaik/Lunar/issues](https://github.com/Mehajabeenshaik/Lunar/issues) |
-| **GitHub Discussions** | [github.com/Mehajabeenshaik/Lunar/discussions](https://github.com/Mehajabeenshaik/Lunar/discussions) |
-| **HF Spaces** | [huggingface.co/spaces/mehajabeen/lunar](https://huggingface.co/spaces/mehajabeen/lunar) |
+### Score Validation
+
+LUNAR implements comprehensive score validation at 4 levels:
+
+- **Grader Level** - Domain-specific scorers with epsilon margins (0.001-0.999)
+- **Environment Level** - Episode reward calculation with clamping
+- **Inference Level** - Step-level validation before logging
+- **API Level** - Response field validation before transmission
+
+### Security Features
+
+✅ **Input Validation** - All requests validated with Pydantic  
+✅ **Error Handling** - Comprehensive exception catching  
+✅ **Type Safety** - Full type hints throughout codebase  
 
 ---
 
-##  Citation
+## 🔗 Community & Support
+
+| Channel | Purpose |
+|---------|---------|
+| **[GitHub Issues](https://github.com/Mehajabeenshaik/Lunar/issues)** | Bug reports & feature requests |
+| **[GitHub Discussions](https://github.com/Mehajabeenshaik/Lunar/discussions)** | Q&A and ideas |
+| **[Live API](https://mehajabeen-lunar.hf.space)** | Try immediately on HF Spaces |
+
+---
+
+## 📖 Citation
 
 If you use LUNAR in your research, please cite:
 
@@ -561,24 +1140,18 @@ If you use LUNAR in your research, please cite:
 
 ---
 
-##  License
+## 📄 License
 
 LUNAR is released under the **MIT License**. See [LICENSE](LICENSE) for details.
 
 ---
 
-
-
----
-
 <p align="center">
-  <strong> LUNAR: Illuminating the Path to Intelligent Agent Training </strong>
+  <strong>LUNAR: Illuminating the Path to Intelligent Agent Training</strong>
   <br><br>
-  Built with  for the RL community
+  <a href="https://github.com/Mehajabeenshaik/Lunar">⭐ Star on GitHub</a> · 
+  <a href="https://mehajabeen-lunar.hf.space">🚀 Try Live API</a> · 
+  <a href="https://github.com/Mehajabeenshaik/Lunar/issues">🐛 Report Issues</a>
   <br><br>
-  <a href="https://github.com/Mehajabeenshaik/Lunar"> Star on GitHub</a> • 
-  <a href="https://huggingface.co/spaces/mehajabeen/lunar"> Try Live API</a> • 
-  <a href="https://github.com/Mehajabeenshaik/Lunar/issues"> Report Issues</a>
+  Built with ❤️ for the RL community
 </p>
-
-</div>
