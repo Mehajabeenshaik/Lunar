@@ -175,11 +175,18 @@ async def step_session(session_id: str, request: StepRequest):
             raise ValueError(f"Session {session_id} not found")
         
         observation, reward, done, info = env.step(request.action)
-        if reward <= 0.0:
-            reward = 0.001
-        elif reward >= 1.0:
-            reward = 0.999
         
+        # CRITICAL: Enforce strict boundaries before returning JSON
+        # Must be strictly between 0 and 1 (not 0.0 or 1.0)
+        reward = float(reward)
+        if reward is None or reward <= 0.0 or reward == 0.0:
+            reward = 0.001
+        if reward >= 1.0 or reward == 1.0:
+            reward = 0.999
+        if not (0 < reward < 1):
+            reward = 0.5  # Fallback to safe middle value
+        
+        reward = float(reward)  # Ensure it's a float, not Decimal or other type        
         return {
             "observation": observation,
             "reward": reward,

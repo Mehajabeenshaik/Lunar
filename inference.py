@@ -64,10 +64,13 @@ def clamp_score(value: Any) -> float:
         score = float(value)
     except (TypeError, ValueError):
         return 0.5
-    if score <= 0.0:
+    if score <= 0.0 or score == 0.0:
         return 0.001
-    if score >= 1.0:
+    if score >= 1.0 or score == 1.0:
         return 0.999
+    # Final safety check
+    if not (0 < score < 1):
+        return 0.5
     return score
 
 # ============ PERFORMANCE METRICS ============

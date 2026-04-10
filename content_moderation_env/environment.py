@@ -160,6 +160,9 @@ class ContentModerationEnv:
         # Ensure reward is float and in valid range
         try:
             reward = float(reward)
+            # Triple check - no exact 0.0 or 1.0 allowed
+            if reward <= 0.0 or reward >= 1.0:
+                reward = 0.5 if reward > 0.5 else 0.001
             assert 0 < reward < 1, f"Score {reward} out of bounds!"
         except (ValueError, AssertionError) as e:
             reward = 0.5  # Default to middle value on error
