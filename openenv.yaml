@@ -1,83 +1,42 @@
 spec_version: 1
-name: lunar-comprehensive-benchmark
-version: "2.0"
-description: Lunar 32-task benchmark
+name: content-moderation-benchmark
+version: "1.0"
+description: "Meta Content Moderation Agent - Real-world social media moderation at billion-post scale"
 type: rl-environment
 runtime: docker
 app: app.py
 port: 7860
 
 graders:
-  - name: ComprehensiveGrader
+  - name: ModerationGrader
     type: deterministic
-    description: Unified grader for all 32 tasks
-    task_count: 32
+    description: Content moderation task grader
+    task_count: 3
 
 tasks:
-  - id: warehouse_novice
-    grader: ComprehensiveGrader
-  - id: warehouse_easy
-    grader: ComprehensiveGrader
-  - id: warehouse_medium
-    grader: ComprehensiveGrader
-  - id: warehouse_intermediate
-    grader: ComprehensiveGrader
-  - id: warehouse_hard
-    grader: ComprehensiveGrader
-  - id: warehouse_extreme
-    grader: ComprehensiveGrader
-  - id: data_ingestion_simple
-    grader: ComprehensiveGrader
-  - id: data_ingestion_complex
-    grader: ComprehensiveGrader
-  - id: data_cleaning_basic
-    grader: ComprehensiveGrader
-  - id: data_cleaning_advanced
-    grader: ComprehensiveGrader
-  - id: data_validation_schema
-    grader: ComprehensiveGrader
-  - id: data_validation_quality
-    grader: ComprehensiveGrader
-  - id: data_transformation_etl
-    grader: ComprehensiveGrader
-  - id: data_export_format
-    grader: ComprehensiveGrader
-  - id: code_style_compliance
-    grader: ComprehensiveGrader
-  - id: code_performance_optimization
-    grader: ComprehensiveGrader
-  - id: code_security_vulnerabilities
-    grader: ComprehensiveGrader
-  - id: code_maintainability_metrics
-    grader: ComprehensiveGrader
-  - id: code_refactoring_simple
-    grader: ComprehensiveGrader
-  - id: code_refactoring_complex
-    grader: ComprehensiveGrader
-  - id: code_testing_coverage
-    grader: ComprehensiveGrader
-  - id: code_integration_testing
-    grader: ComprehensiveGrader
-  - id: resource_budget_simple
-    grader: ComprehensiveGrader
-  - id: resource_budget_complex
-    grader: ComprehensiveGrader
-  - id: resource_scheduling_tasks
-    grader: ComprehensiveGrader
-  - id: resource_scheduling_teams
-    grader: ComprehensiveGrader
-  - id: resource_capacity_planning
-    grader: ComprehensiveGrader
-  - id: optimization_query_basic
-    grader: ComprehensiveGrader
-  - id: optimization_query_advanced
-    grader: ComprehensiveGrader
-  - id: optimization_memory_usage
-    grader: ComprehensiveGrader
-  - id: optimization_throughput
-    grader: ComprehensiveGrader
-  - id: optimization_latency
-    grader: ComprehensiveGrader
+  - id: moderation_task_1_classification
+    name: "Post Classification"
+    description: "Classify posts as Safe, Hate Speech, Spam, or Misinformation"
+    difficulty: "easy"
+    grader: ModerationGrader
+    
+  - id: moderation_task_2_reasoning
+    name: "Classification with Reasoning"
+    description: "Classify posts with reasoning and severity scoring (1-5)"
+    difficulty: "medium"
+    grader: ModerationGrader
+    
+  - id: moderation_task_3_full
+    name: "Full Moderation Decision"
+    description: "Complete moderation: classify, severity, action, explanation"
+    difficulty: "hard"
+    grader: ModerationGrader
 
-total_tasks: 32
+total_tasks: 3
 total_graders: 1
+environment: ContentModerationEnv
+reward_range: [0.0, 1.0]
+domains:
+  - social_media_moderation
+  - content_safety
+  - platform_policy_enforcement

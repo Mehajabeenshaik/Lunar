@@ -1,26 +1,250 @@
-"""FastAPI app wrapper for HF Spaces deployment."""
+"""
+Content Moderation Benchmark - FastAPI Server
+Meta's Real-World Problem: Moderating social media posts at billion-scale
+"""
 
 import os
 import sys
+import json
 import traceback
 from pathlib import Path
+from typing import Dict, Optional
+from datetime import datetime
 
-# Add project root to path for proper imports
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+# Add project root to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
-print("[DEBUG] Starting app.py...")
-print(f"[DEBUG] Python path: {sys.path[:2]}")
+print("[DEBUG] Starting Content Moderation app...")
 
 try:
-    print("[DEBUG] Importing FastAPI app from server_multi_domain...")
-    from warehouse_env.warehouse_env.server_multi_domain import app as fastapi_app
-    app = fastapi_app  # Export as module-level variable for uvicorn
-    print("[DEBUG] App imported successfully!")
+    from content_moderation_env import ContentModerationEnv
+    print("[DEBUG] ContentModerationEnv imported successfully")
 except Exception as e:
-    print(f"[ERROR] Failed to import app: {e}")
-    print(f"[ERROR] Traceback:")
+    print(f"[ERROR] Failed to import ContentModerationEnv: {e}")
     traceback.print_exc()
     sys.exit(1)
+
+# Initialize FastAPI app
+app = FastAPI(
+    title="Content Moderation Benchmark",
+    description="Meta Content Moderation Agent Environment",
+    version="1.0.0"
+)
+
+# Pydantic models for requests/responses
+class StartSessionRequest(BaseModel):
+    task_id: int = 1
+    seed: Optional[int] = None
+
+
+class StepRequest(BaseModel):
+    session_id: str
+    action: Dict
+
+
+class SessionState:
+    """In-memory session management"""
+    def __init__(self):
+        self.sessions: Dict[str, ContentModerationEnv] = {}
+    
+    def create_session(self, task_id: int = 1, seed: Optional[int] = None) -> str:
+        env = ContentModerationEnv(task_id=task_id, seed=seed)
+        session_id = env.current_session_id
+        self.sessions[session_id] = env
+        return session_id
+    
+    def get_session(self, session_id: str) -> Optional[ContentModerationEnv]:
+        return self.sessions.get(session_id)
+    
+    def delete_session(self, session_id: str) -> bool:
+        if session_id in self.sessions:
+            del self.sessions[session_id]
+            return True
+        return False
+
+
+sessions = SessionState()
+
+
+# ============ API Endpoints ============
+
+@app.get("/")
+async def root():
+    """Health check and welcome endpoint"""
+    return {
+        "name": "Content Moderation Benchmark",
+        "version": "1.0.0",
+        "status": "running",
+        "description": "Meta Content Moderation Agent Environment for RL training",
+        "tasks": {
+            1: "Task 1 (Easy): Post Classification",
+            2: "Task 2 (Medium): Classification with Reasoning & Severity",
+            3: "Task 3 (Hard): Full Moderation Decision"
+        }
+    }
+
+
+@app.get("/manifest")
+async def get_manifest():
+    """Return OpenEnv manifest"""
+    return {
+        "name": "content-moderation-benchmark",
+        "version": "1.0.0",
+        "spec_version": 1,
+        "description": "Meta Content Moderation Agent Environment",
+        "type": "rl-environment",
+        "tasks": 3,
+        "reward_range": [0.0, 1.0],
+        "observation_space": {
+            "type": "json",
+            "description": "JSON object with post content and task instructions"
+        }
+    }
+
+
+@app.post("/session/start")
+async def start_session(request: StartSessionRequest):
+    """
+    Start a new session
+    
+    Args:
+        task_id: 1 (Easy), 2 (Medium), 3 (Hard)
+        seed: Optional random seed
+    
+    Returns:
+        session_id and initial observation
+    """
+    try:
+        if request.task_id not in [1, 2, 3]:
+            raise ValueError("task_id must be 1, 2, or 3")
+        
+        session_id = sessions.create_session(
+            task_id=request.task_id,
+            seed=request.seed
+        )
+        
+        env = sessions.get_session(session_id)
+        observation = env.reset()
+        
+        return {
+            "session_id": session_id,
+            "task_id": request.task_id,
+            "observation": observation,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/session/{session_id}/step")
+async def step_session(session_id: str, request: StepRequest):
+    """
+    Execute one step in the environment
+    
+    Args:
+        session_id: Session identifier
+        action: Agent's moderation decision
+    
+    Returns:
+        observation, reward, done, info
+    """
+    try:
+        env = sessions.get_session(session_id)
+        if not env:
+            raise ValueError(f"Session {session_id} not found")
+        
+        observation, reward, done, info = env.step(request.action)
+        
+        return {
+            "observation": observation,
+            "reward": reward,
+            "done": done,
+            "info": info,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/session/{session_id}/summary")
+async def get_session_summary(session_id: str):
+    """Get episode summary for a session"""
+    try:
+        env = sessions.get_session(session_id)
+        if not env:
+            raise ValueError(f"Session {session_id} not found")
+        
+        summary = env.get_episode_summary()
+        return {
+            "session_id": session_id,
+            "summary": summary,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/session/{session_id}")
+async def delete_session(session_id: str):
+    """Delete a session"""
+    try:
+        if sessions.delete_session(session_id):
+            return {"status": "deleted", "session_id": session_id}
+        else:
+            raise ValueError(f"Session {session_id} not found")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/tasks")
+async def list_tasks():
+    """List all available tasks"""
+    return {
+        "tasks": [
+            {
+                "id": 1,
+                "name": "Post Classification",
+                "description": "Classify posts as Safe, Hate Speech, Spam, or Misinformation",
+                "difficulty": "easy",
+                "reward_metric": "Exact match (1.0 correct, 0.0 wrong)"
+            },
+            {
+                "id": 2,
+                "name": "Classification with Reasoning",
+                "description": "Classify posts with reasoning and severity (1-5)",
+                "difficulty": "medium",
+                "reward_metric": "Composite (50% category, 50% severity)"
+            },
+            {
+                "id": 3,
+                "name": "Full Moderation Decision",
+                "description": "Complete moderation: classify, severity, action, explanation",
+                "difficulty": "hard",
+                "reward_metric": "Weighted (25% each: category, severity, action, explanation)"
+            }
+        ]
+    }
+
+
+@app.get("/stats")
+async def get_stats():
+    """Get benchmark statistics"""
+    return {
+        "active_sessions": len(sessions.sessions),
+        "environment": "ContentModerationEnv",
+        "tasks_available": 3,
+        "reward_range": [0.0, 1.0],
+        "domains": [
+            "social_media_moderation",
+            "content_safety",
+            "platform_policy_enforcement"
+        ],
+        "timestamp": datetime.now().isoformat()
+    }
+
 
 if __name__ == "__main__":
     import uvicorn
@@ -28,6 +252,8 @@ if __name__ == "__main__":
     host = os.getenv("HOST", "0.0.0.0")
     
     print(f"[DEBUG] Starting uvicorn on {host}:{port}...")
+    print(f"[DEBUG] Open http://localhost:{port}/docs for API documentation")
+    
     try:
         uvicorn.run(
             app,
@@ -36,6 +262,6 @@ if __name__ == "__main__":
             log_level="info"
         )
     except Exception as e:
-        print(f"[ERROR] Failed to start uvicorn: {e}")
+        print(f"[ERROR] Failed to start server: {e}")
         traceback.print_exc()
         sys.exit(1)
