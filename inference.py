@@ -28,14 +28,17 @@ except ImportError:
     print("[ERROR] OpenAI package not found. Install with: pip install openai>=1.3.0")
     sys.exit(1)
 
-# ============ ENVIRONMENT CONFIGURATION - NO FALLBACKS ============
-# Validator injects these - must use os.environ[] (not getenv) to fail fast if missing
+# ============ ENVIRONMENT CONFIGURATION ============
+# Validator injects these - try API_KEY first (validator's choice), fall back to HF_TOKEN (requirements)
 
-try:
-    API_BASE_URL = os.environ["API_BASE_URL"]
-    API_KEY = os.environ["API_KEY"]
-except KeyError as e:
-    print(f"[ERROR] Missing required environment variable: {e}", file=sys.stderr)
+API_BASE_URL = os.environ.get("API_BASE_URL")
+API_KEY = os.environ.get("API_KEY") or os.environ.get("HF_TOKEN")
+
+if not API_BASE_URL:
+    print(f"[ERROR] Missing API_BASE_URL environment variable", file=sys.stderr)
+    sys.exit(1)
+if not API_KEY:
+    print(f"[ERROR] Missing API_KEY or HF_TOKEN environment variable", file=sys.stderr)
     sys.exit(1)
 
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
@@ -43,19 +46,16 @@ BENCHMARK = "content-moderation-benchmark"
 ENVIRONMENT_HOST = os.getenv("ENVIRONMENT_HOST", "http://localhost:7860")
 
 # ============ INITIALIZE OPENAI CLIENT AT MODULE LEVEL ============
-# Must be at module level so validator can track ALL API calls through this instance
+# CRITICAL: Validator tracks ALL requests through this single client instance
+# MUST be before any other code to ensure validator can intercept
+
+print(f"[DEBUG] Initializing OpenAI client with base_url={API_BASE_URL}", file=sys.stderr, flush=True)
+print(f"[DEBUG] API_KEY set: {bool(API_KEY)}", file=sys.stderr, flush=True)
 
 client = OpenAI(
     base_url=API_BASE_URL,
     api_key=API_KEY,
 )
-
-BENCHMARK = "content-moderation-benchmark"
-ENVIRONMENT_HOST = os.getenv("ENVIRONMENT_HOST", "http://localhost:7860")
-MAX_STEPS = 8
-MAX_RETRIES = 3
-ENABLE_PARALLEL = True
-MAX_WORKERS = 3  # Parallel tasks (domains don't conflict)
 
 # ============ PERFORMANCE METRICS ============
 
@@ -190,11 +190,9 @@ class OptimizedContentModerationAgent:
     """Agent with inference optimizations: caching, batching, parallel execution"""
     
     def __init__(self):
-        """Initialize OpenAI client and connection pool"""
-        self.client = OpenAI(
-            api_key=API_KEY,
-            base_url=API_BASE_URL
-        )
+        """Initialize with global client and connection pool"""
+        # Use the module-level client so validator can track ALL API calls
+        # DO NOT create a new client here - use global 'client'
         self.http_pool = HTTPClientPool()
         self.prompt_cache = PromptCache()
         self.session_id = None
@@ -261,13 +259,13 @@ class OptimizedContentModerationAgent:
         if task_id == 1:
             prompt, cached = self.prompt_cache.get_prompt(task_id, text=post_text)
             
-            response = self.client.messages.create(
+            response = client.chat.completions.create(
                 model=MODEL_NAME,
                 max_tokens=50,  # Reduced from default
                 messages=[{"role": "user", "content": prompt}]
             )
             
-            result = response.content[0].text.strip().lower()
+            result = response.choices[0].message.content.strip().lower()
             categories = ["safe", "hate_speech", "spam", "misinformation"]
             category = next((c for c in categories if c in result), "safe")
             tokens_estimate = len(prompt.split()) + 50
@@ -277,14 +275,14 @@ class OptimizedContentModerationAgent:
         elif task_id == 2:
             prompt, cached = self.prompt_cache.get_prompt(task_id, text=post_text)
             
-            response = self.client.messages.create(
+            response = client.chat.completions.create(
                 model=MODEL_NAME,
                 max_tokens=80,
                 messages=[{"role": "user", "content": prompt}]
             )
             
             try:
-                result = json.loads(response.content[0].text.strip())
+                result = json.loads(response.choices[0].message.content.strip())
                 tokens_estimate = len(prompt.split()) + 80
                 return {
                     "category": result.get("category", "safe").lower(),
@@ -296,14 +294,14 @@ class OptimizedContentModerationAgent:
         elif task_id == 3:
             prompt, cached = self.prompt_cache.get_prompt(task_id, text=post_text)
             
-            response = self.client.messages.create(
+            response = client.chat.completions.create(
                 model=MODEL_NAME,
                 max_tokens=150,
                 messages=[{"role": "user", "content": prompt}]
             )
             
             try:
-                result = json.loads(response.content[0].text.strip())
+                result = json.loads(response.choices[0].message.content.strip())
                 tokens_estimate = len(prompt.split()) + 150
                 return {
                     "category": result.get("category", "safe").lower(),
@@ -317,14 +315,14 @@ class OptimizedContentModerationAgent:
         # Tasks 4-9 (Domain 2 & 3) - simplified but effective
         elif task_id in [4, 5, 6, 7, 8, 9]:
             # Standard approach for all domain 2 & 3 tasks
-            response = self.client.messages.create(
+            response = client.chat.completions.create(
                 model=MODEL_NAME,
                 max_tokens=120,
                 messages=[{"role": "user", "content": f"Moderate content. Post: \"{post_text}\". Respond in JSON."}]
             )
             
             try:
-                result = json.loads(response.content[0].text.strip())
+                result = json.loads(response.choices[0].message.content.strip())
                 tokens_estimate = 100 + 120
                 return result, tokens_estimate
             except:
