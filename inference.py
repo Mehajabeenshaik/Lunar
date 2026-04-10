@@ -30,13 +30,23 @@ except ImportError:
 
 # ============ ENVIRONMENT CONFIGURATION ============
 
-API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
-HF_TOKEN = os.getenv("HF_TOKEN")
+# Use validator-provided environment variables (REQUIRED)
+API_BASE_URL = os.getenv("API_BASE_URL")
+API_KEY = os.getenv("API_KEY")
 
-if not HF_TOKEN:
-    print("[ERROR] HF_TOKEN environment variable not set")
+# Fallback to alternatives if not provided by validator
+if not API_BASE_URL:
+    API_BASE_URL = os.getenv("LITELLM_PROXY_BASE_URL", "https://router.huggingface.co/v1")
+if not API_KEY:
+    API_KEY = os.getenv("HF_TOKEN")
+
+if not API_KEY or not API_BASE_URL:
+    print(f"[ERROR] Missing required environment variables:")
+    print(f"  API_BASE_URL={API_BASE_URL}")
+    print(f"  API_KEY={'***' if API_KEY else 'NOT_SET'}")
     sys.exit(1)
+
+MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 
 BENCHMARK = "content-moderation-benchmark"
 ENVIRONMENT_HOST = os.getenv("ENVIRONMENT_HOST", "http://localhost:7860")
@@ -180,7 +190,7 @@ class OptimizedContentModerationAgent:
     def __init__(self):
         """Initialize OpenAI client and connection pool"""
         self.client = OpenAI(
-            api_key=HF_TOKEN,
+            api_key=API_KEY,
             base_url=API_BASE_URL
         )
         self.http_pool = HTTPClientPool()
