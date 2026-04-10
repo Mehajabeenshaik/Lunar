@@ -24,12 +24,18 @@ class OptimizedModeratorGrader:
         Validator requires: 0 < score < 1
         Add epsilon padding to boundary values to pass validation
         """
-        if score <= 0.0:
+        if score <= 0.0 or score == 0.0:
             return 0.001
-        elif score >= 1.0:
+        elif score >= 1.0 or score == 1.0:
             return 0.999
         else:
-            return score
+            # Final check: round to 4 decimals to eliminate floating point edge cases
+            result = round(float(score), 4)
+            if result >= 1.0 or result == 1.0:
+                return 0.999
+            if result <= 0.0 or result == 0.0:
+                return 0.001
+            return result
     
     def _get_cache_key(self, task_id: int, prediction: Dict, ground_truth: Dict) -> str:
         """Generate cache key for grading results"""
