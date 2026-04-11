@@ -7,7 +7,7 @@ sdk: docker
 app_port: 7860
 pinned: false
 license: mit
-short_description: "Multi-turn RL benchmark for content moderation. 3 domains, 30 tasks."
+short_description: "Multi-turn RL benchmark for content moderation."
 ---
 
 # 🌙 Lunar — Content Moderation Benchmark
