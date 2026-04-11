@@ -1,6 +1,5 @@
 ---
 title: Lunar Content Moderation Benchmark
-emoji: 🌙
 colorFrom: indigo
 colorTo: purple
 sdk: docker
@@ -18,7 +17,7 @@ short_description: "Multi-turn RL benchmark for content moderation."
 [![Tasks](https://img.shields.io/badge/Tasks-30%20Deterministic-orange?style=for-the-badge)](#domains--difficulty-gradient)
 [![License](https://img.shields.io/badge/License-MIT-purple?style=for-the-badge)](LICENSE)
 
-**[🚀 Live Demo](https://huggingface.co/spaces/mehajabeen/lunar) · [📖 API Docs](https://mehajabeen-lunar.hf.space/docs) · [💊 Health Check](https://mehajabeen-lunar.hf.space/health) · [🏆 Leaderboard](https://mehajabeen-lunar.hf.space/leaderboard)**
+**[ Live Demo](https://huggingface.co/spaces/mehajabeen/lunar) · [ API Docs](https://mehajabeen-lunar.hf.space/docs) · [ Health Check](https://mehajabeen-lunar.hf.space/health) · [ Leaderboard](https://mehajabeen-lunar.hf.space/leaderboard)**
 
 </div>
 
@@ -32,14 +31,6 @@ Lunar is a **multi-turn RL environment** for training AI agents to moderate cont
 
 ---
 
-## Why This Matters
-
-| Benchmark | Real-World Task | Multi-Turn | Cultural Context | Threat Detection | Partial Credit |
-|-----------|:-:|:-:|:-:|:-:|:-:|
-| HumanEval | ❌ | ❌ | ❌ | ❌ | ❌ |
-| MBPP | ❌ | ❌ | ❌ | ❌ | ❌ |
-| OpenAI Evals | ⚠️ Partial | ❌ | ❌ | ❌ | ❌ |
-| **Lunar** | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 Content moderation is harder than it looks:
 - The **same post** can be safe or a hate speech violation depending on author history, regional laws, and trending news context
@@ -417,25 +408,25 @@ lunar/
 
 | Check | Status |
 |-------|--------|
-| `openenv.yaml` present and valid | ✅ |
-| All 30 tasks produce scores in (0, 1) | ✅ |
-| `POST /reset` works | ✅ |
-| `POST /step` returns observation, reward, done, info | ✅ |
-| `GET /state` returns environment state | ✅ |
-| Multi-turn episodes (5 steps) | ✅ |
-| Progressive context reveal | ✅ |
-| Grader feedback per step | ✅ |
-| 3 distinct domain graders | ✅ |
-| Rich partial-credit (7 tiers per domain) | ✅ |
-| Pydantic v2 typed models | ✅ |
-| `inference.py` with baseline agent | ✅ |
-| `[START]` `[STEP]` `[END]` log format | ✅ |
-| Docker builds and runs | ✅ |
-| Runs on 2 vCPU, 8GB RAM | ✅ |
-| Difficulty gradient (easy → hard) | ✅ |
-| Weighted scoring (later steps worth more) | ✅ |
-| `/leaderboard` endpoint | ✅ |
-| Interactive API docs at `/docs` | ✅ |
+| `openenv.yaml` present and valid |
+| All 30 tasks produce scores in (0, 1) |
+| `POST /reset` works | 
+| `POST /step` returns observation, reward, done, info | 
+| `GET /state` returns environment state | 
+| Multi-turn episodes (5 steps) | 
+| Progressive context reveal | 
+| Grader feedback per step | 
+| 3 distinct domain graders | 
+| Rich partial-credit (7 tiers per domain) | 
+| Pydantic v2 typed models | 
+| `inference.py` with baseline agent | 
+| `[START]` `[STEP]` `[END]` log format | 
+| Docker builds and runs | 
+| Runs on 2 vCPU, 8GB RAM | 
+| Difficulty gradient (easy → hard) | 
+| Weighted scoring (later steps worth more) | 
+| `/leaderboard` endpoint | 
+| Interactive API docs at `/docs` | 
 
 ---
 
@@ -443,16 +434,16 @@ lunar/
 
 | Resource | URL |
 |----------|-----|
-| 🚀 **Live HF Space** | https://huggingface.co/spaces/mehajabeen/lunar |
-| 📖 **Interactive API Docs** | https://mehajabeen-lunar.hf.space/docs |
-| 💊 **Health Check** | https://mehajabeen-lunar.hf.space/health |
-| 🏆 **Leaderboard** | https://mehajabeen-lunar.hf.space/leaderboard |
+|  **Live HF Space** | https://huggingface.co/spaces/mehajabeen/lunar |
+|  **Interactive API Docs** | https://mehajabeen-lunar.hf.space/docs |
+|  **Health Check** | https://mehajabeen-lunar.hf.space/health |
+|  **Leaderboard** | https://mehajabeen-lunar.hf.space/leaderboard |
 
 ---
 
 <div align="center">
 
-**Status: ✅ OpenEnv v1 Compliant · ✅ Docker Verified · ✅ Baseline Reproduced · ✅ Deployed & Running**
+**Status: OpenEnv v1 Compliant ·  Docker Verified ·  Baseline Reproduced ·  Deployed & Running**
 
 *Built for the Meta PyTorch × Scaler School of Technology OpenEnv Hackathon 2026*
 
