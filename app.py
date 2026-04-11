@@ -29,7 +29,7 @@ from models import (
 app = FastAPI(
     title="Lunar Content Moderation Benchmark",
     description="Multi-turn RL environment for content moderation. 30 tasks across 3 domains.",
-    version="3.0.0",
+    version="3.2.0",
 )
 
 # ─── Session Management ─────────────────────────────────────────────────
@@ -106,7 +106,7 @@ async def root():
     """Welcome and health check."""
     return {
         "name": "Lunar Content Moderation Benchmark",
-        "version": "3.0.0",
+        "version": "3.2.0",
         "status": "running",
         "spec": "OpenEnv v1",
         "tasks": 30,
@@ -139,7 +139,7 @@ async def health():
 
         return {
             "status": "ok",
-            "version": "3.0.0",
+            "version": "3.2.0",
             "active_sessions": len(sessions.sessions),
             "timestamp": datetime.now().isoformat(),
         }
@@ -152,7 +152,7 @@ async def get_manifest():
     """Return OpenEnv manifest."""
     return {
         "name": "lunar-content-moderation-benchmark",
-        "version": "3.0.0",
+        "version": "3.2.0",
         "spec_version": 1,
         "description": "Multi-turn RL benchmark for content moderation. 3 domains, 30 tasks, progressive context reveal.",
         "type": "rl-environment",
@@ -231,7 +231,7 @@ async def get_state():
     """OpenEnv standard: Get environment state."""
     return {
         "name": "lunar-content-moderation-benchmark",
-        "version": "3.0.0",
+        "version": "3.2.0",
         "tasks_available": 30,
         "active_sessions": len(sessions.sessions),
         "domains": 3,
