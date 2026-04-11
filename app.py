@@ -52,6 +52,51 @@ class SessionManager:
 sessions = SessionManager()
 
 
+# ─── Leaderboard ────────────────────────────────────────────────────────
+
+class LeaderboardManager:
+    """In-memory leaderboard tracking the best completed sessions."""
+    def __init__(self):
+        self._entries: List[Dict] = []
+
+    def record(self, session_id: str, env: "ContentModerationEnv") -> None:
+        """Record a completed episode's stats."""
+        if not env.rewards_history:
+            return
+        entry = {
+            "session_id": session_id,
+            "task_id": env.task_id,
+            "domain": env.domain,
+            "difficulty": env.difficulty,
+            "task_name": env.task_meta.get("name", f"Task {env.task_id}"),
+            "steps": env.steps,
+            "best_reward": max(env.rewards_history),
+            "avg_reward": round(sum(env.rewards_history) / len(env.rewards_history), 4),
+            "final_reward": env.rewards_history[-1],
+            "step_scores": env.rewards_history[:],
+            "timestamp": datetime.now().isoformat(),
+        }
+        self._entries.append(entry)
+        # Keep only the best 1000 sessions
+        if len(self._entries) > 1000:
+            self._entries = sorted(
+                self._entries, key=lambda x: x["best_reward"], reverse=True
+            )[:1000]
+
+    def top(self, n: int = 10, domain: Optional[str] = None) -> List[Dict]:
+        filtered = self._entries
+        if domain:
+            filtered = [e for e in filtered if e["domain"] == domain]
+        return sorted(filtered, key=lambda x: x["best_reward"], reverse=True)[:n]
+
+    @property
+    def total(self) -> int:
+        return len(self._entries)
+
+
+leaderboard = LeaderboardManager()
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # OPENENV STANDARD ENDPOINTS
 # ═══════════════════════════════════════════════════════════════════════════
@@ -165,6 +210,10 @@ async def _do_step(session_id: str, action: Dict) -> Dict:
         observation, reward, done, info = env.step(action)
         reward = safe_clamp(reward)
 
+        # Record completed episodes to leaderboard
+        if done:
+            leaderboard.record(session_id, env)
+
         return StepResponse(
             observation=Observation(**observation),
             reward=reward,
@@ -264,6 +313,21 @@ async def get_stats():
         "reward_range": [0.01, 0.99],
         "multi_turn": True,
         "max_steps": 5,
+    }
+
+
+@app.get("/leaderboard")
+async def get_leaderboard(
+    limit: int = 10,
+    domain: Optional[str] = None,
+):
+    """Top completed sessions ranked by best reward."""
+    top = leaderboard.top(n=limit, domain=domain)
+    return {
+        "total_sessions": leaderboard.total,
+        "limit": limit,
+        "domain_filter": domain,
+        "leaderboard": top,
     }
 
 
