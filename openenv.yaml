@@ -1,281 +1,301 @@
 spec_version: 1
-name: content-moderation-benchmark
-version: "2.0"
-description: "Meta Content Moderation Agent - Real-world social media moderation at billion-post scale. 30 tasks across 7 domains with advanced reasoning and 6-layer boundary protection."
+name: lunar-content-moderation-benchmark
+version: "3.0.0"
+description: >
+  Multi-turn RL benchmark for content moderation. Trains agents to moderate
+  social media content with context awareness, nuance, and accountability.
+  3 domains, 30 tasks, progressive context reveal, rich partial credit.
+
+  Domains:
+  - text_classification: 10 tasks (classify posts by category, severity, and reasoning)
+  - contextual_policy: 10 tasks (enforce policies with author history, culture, exceptions)
+  - threat_assessment: 10 tasks (detect coordinated threats, misinformation, harassment)
+
 type: rl-environment
 runtime: docker
 app: app.py
 port: 7860
+tagline: "Train agents to moderate content like Meta engineers — with context, nuance, and accountability."
 
 graders:
-  - name: ModeratorGrader
+  - name: TextClassificationGrader
     type: deterministic
-    description: Content moderation task grader with 6-layer boundary protection for all 30 tasks
-    task_count: 30
-
-tasks:
-  # DOMAIN 1: BASIC CLASSIFICATION (Tasks 1-3)
-  - id: moderation_task_1
-    name: "Post Classification (Easy)"
-    description: "Classify posts as Safe, Hate Speech, Spam, or Misinformation"
-    difficulty: "easy"
-    domain: "text_classification"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_2
-    name: "Classification with Reasoning (Medium)"
-    description: "Classify posts with reasoning and severity scoring (1-5)"
-    difficulty: "medium"
-    domain: "text_classification"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_3
-    name: "Full Moderation Decision (Hard)"
-    description: "Complete moderation: classify, severity, action, explanation"
-    difficulty: "hard"
-    domain: "text_classification"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-
-  # DOMAIN 2: CONTEXT-AWARE MODERATION (Tasks 4-6)
-  - id: moderation_task_4
-    name: "Author History Context (Easy)"
-    description: "Classify posts considering author violation history"
-    difficulty: "easy"
-    domain: "context_aware_moderation"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_5
-    name: "Trending Topic Context (Medium)"
-    description: "Apply policy exceptions based on trending topics"
-    difficulty: "medium"
-    domain: "context_aware_moderation"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_6
-    name: "Appeal Case Review (Hard)"
-    description: "Review appeals of moderation decisions"
-    difficulty: "hard"
-    domain: "context_aware_moderation"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-
-  # DOMAIN 3: EDGE CASES (Tasks 7-9)
-  - id: moderation_task_7
-    name: "False Positive Detection (Easy)"
-    description: "Identify and correct false positive moderation flags"
-    difficulty: "easy"
-    domain: "edge_cases"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_8
-    name: "Sarcasm & Irony Detection (Medium)"
-    description: "Detect sarcasm and irony to avoid false positives"
-    difficulty: "medium"
-    domain: "edge_cases"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_9
-    name: "Coordinated Inauthentic Behavior (Hard)"
-    description: "Detect organized harassment campaigns"
-    difficulty: "hard"
-    domain: "edge_cases"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-
-  # DOMAIN 4: IMAGE & MULTIMODAL (Tasks 10-14)
-  - id: moderation_task_10
-    name: "Image Safety (Easy)"
-    description: "Binary safe/explicit image classification"
-    difficulty: "easy"
-    domain: "multimodal"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_11
-    name: "Visual Toxicity (Medium)"
-    description: "Graduated severity for toxic visual content"
-    difficulty: "medium"
-    domain: "multimodal"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_12
-    name: "Multimodal Analysis (Medium)"
-    description: "Consider both image and text together"
-    difficulty: "medium"
-    domain: "multimodal"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_13
-    name: "Deepfake Detection (Hard)"
-    description: "Authenticity judgment for videos/images"
-    difficulty: "hard"
-    domain: "multimodal"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_14
-    name: "Scene Safety Assessment (Hard)"
-    description: "Context appropriateness evaluation"
-    difficulty: "hard"
-    domain: "multimodal"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-
-  # DOMAIN 5: USER CONTEXT (Tasks 15-20)
-  - id: moderation_task_15
-    name: "Author Credibility (Easy)"
-    description: "Account legitimacy assessment"
-    difficulty: "easy"
-    domain: "user_context"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_16
-    name: "Bot Detection (Easy)"
-    description: "Classify accounts as human or bot"
-    difficulty: "easy"
-    domain: "user_context"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_17
-    name: "Inauthentic Behavior Patterns (Medium)"
-    description: "Network coordination detection"
-    difficulty: "medium"
-    domain: "user_context"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_18
-    name: "Misinformation Spread (Medium)"
-    description: "Verify claim accuracy and track spread"
-    difficulty: "medium"
-    domain: "user_context"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_19
-    name: "User Appeal Fairness (Hard)"
-    description: "Judge appeal validity fairly"
-    difficulty: "hard"
-    domain: "user_context"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_20
-    name: "User Trust Score (Hard)"
-    description: "Build user reputation scores"
-    difficulty: "hard"
-    domain: "user_context"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-
-  # DOMAIN 6: CROSS-POST ANALYSIS (Tasks 21-25)
-  - id: moderation_task_21
-    name: "Campaign Detection (Easy)"
-    description: "Identify coordinated inauthentic posts"
-    difficulty: "easy"
-    domain: "cross_post"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_22
-    name: "Viral Misinformation (Medium)"
-    description: "Track false claims across platform"
-    difficulty: "medium"
-    domain: "cross_post"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_23
-    name: "Harassment Network (Medium)"
-    description: "Detect coordinated harassment campaigns"
-    difficulty: "medium"
-    domain: "cross_post"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_24
-    name: "Context Collapse (Hard)"
-    description: "Content appropriateness varies by context"
-    difficulty: "hard"
-    domain: "cross_post"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_25
-    name: "Cross-platform Consistency (Hard)"
-    description: "Maintain uniform moderation across platforms"
-    difficulty: "hard"
-    domain: "cross_post"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-
-  # DOMAIN 7: ADVANCED REASONING (Tasks 26-30)
-  - id: moderation_task_26
-    name: "Satire vs Hate (Hard)"
-    description: "Distinguish satire from genuine hate speech"
-    difficulty: "hard"
-    domain: "advanced_reasoning"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_27
-    name: "Cultural Sensitivity (Hard)"
-    description: "Context-specific appropriateness"
-    difficulty: "hard"
-    domain: "advanced_reasoning"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_28
-    name: "Policy Evolution (Hard)"
-    description: "Apply updated policies correctly"
-    difficulty: "hard"
-    domain: "advanced_reasoning"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_29
-    name: "Multi-language (Hard)"
-    description: "Consistent moderation across languages"
-    difficulty: "hard"
-    domain: "advanced_reasoning"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-    
-  - id: moderation_task_30
-    name: "Accessibility (Hard)"
-    description: "Accessibility-aware moderation"
-    difficulty: "hard"
-    domain: "advanced_reasoning"
-    grader: ModeratorGrader
-    reward_range: [0.001, 0.999]
-
-total_tasks: 30
-total_graders: 1
-environment: ContentModerationEnv
-reward_range: [0.001, 0.999]
-domains:
-  - text_classification
-  - context_aware_moderation
-  - edge_cases
-  - multimodal
-  - user_context
-  - cross_post
-  - advanced_reasoning
+    description: "Multi-factor scoring: category + severity + reasoning quality (6 tiers of partial credit)"
+    tasks: 10
+  - name: ContextualPolicyGrader
+    type: deterministic
+    description: "Context-aware: policy compliance + context usage + edge case handling"
+    tasks: 10
+  - name: ThreatAssessmentGrader
+    type: deterministic
+    description: "Threat pipeline: detection + severity + response plan + confidence calibration"
+    tasks: 10
 
 benchmarks:
-  - name: "baseline_llm_agent"
-    description: "OpenAI-based baseline agent for all 30 tasks"
-    target_runtime_seconds: 1800
-    expected_average_reward: 0.55
+  - name: text_classification
+    description: "Classify posts by category, severity, and reasoning with multi-factor partial credit"
+    tasks: 10
+    difficulties: [easy, medium, hard]
+  - name: contextual_policy
+    description: "Enforce moderation policies considering author history, cultural context, and policy exceptions"
+    tasks: 10
+    difficulties: [easy, medium, hard]
+  - name: threat_assessment
+    description: "Detect coordinated threats, misinformation cascades, and harassment networks"
+    tasks: 10
+    difficulties: [easy, medium, hard]
+
+total_tasks: 30
+multi_turn: true
+max_steps_per_episode: 5
+reward_range: [0.01, 0.99]
+
+use_cases:
+  - Train content moderation agents on real-world scenarios
+  - Evaluate LLM reasoning on ambiguous content decisions
+  - Benchmark multi-step threat detection and response
+  - Test cultural sensitivity and policy compliance
+
+tasks:
+  # ═══ DOMAIN 1: TEXT CLASSIFICATION (Tasks 1─10) ═══
+  - id: task_1
+    name: "Basic Post Classification"
+    description: "Classify posts as safe, hate_speech, spam, or misinformation"
+    difficulty: easy
+    domain: text_classification
+    grader: TextClassificationGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_2
+    name: "Spam Detection with Severity"
+    description: "Identify spam content and rate its severity (1-5)"
+    difficulty: easy
+    domain: text_classification
+    grader: TextClassificationGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_3
+    name: "Hate Speech Classification"
+    description: "Detect hate speech with severity assessment and explanation"
+    difficulty: easy
+    domain: text_classification
+    grader: TextClassificationGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_4
+    name: "Misinformation Flagging"
+    description: "Identify false or misleading claims and explain why"
+    difficulty: medium
+    domain: text_classification
+    grader: TextClassificationGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_5
+    name: "Multi-label Classification"
+    description: "Content may belong to multiple violation categories"
+    difficulty: medium
+    domain: text_classification
+    grader: TextClassificationGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_6
+    name: "Severity Calibration"
+    description: "Assign precise severity scores with justification"
+    difficulty: medium
+    domain: text_classification
+    grader: TextClassificationGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_7
+    name: "Nuanced Classification"
+    description: "Handle borderline content requiring careful reasoning"
+    difficulty: hard
+    domain: text_classification
+    grader: TextClassificationGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_8
+    name: "Context-Dependent Classification"
+    description: "Classification that changes based on post context"
+    difficulty: hard
+    domain: text_classification
+    grader: TextClassificationGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_9
+    name: "Sarcasm-Aware Classification"
+    description: "Detect sarcasm that changes the meaning of content"
+    difficulty: hard
+    domain: text_classification
+    grader: TextClassificationGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_10
+    name: "Full Classification Pipeline"
+    description: "Complete classification with category, severity, action, and reasoning"
+    difficulty: hard
+    domain: text_classification
+    grader: TextClassificationGrader
+    reward_range: [0.01, 0.99]
+
+  # ═══ DOMAIN 2: CONTEXTUAL POLICY (Tasks 11─20) ═══
+  - id: task_11
+    name: "Author History Review"
+    description: "Moderate considering author's prior violation history"
+    difficulty: easy
+    domain: contextual_policy
+    grader: ContextualPolicyGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_12
+    name: "New Account Screening"
+    description: "Apply stricter policies for new/unverified accounts"
+    difficulty: easy
+    domain: contextual_policy
+    grader: ContextualPolicyGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_13
+    name: "Trending Topic Exceptions"
+    description: "Apply policy exceptions for newsworthy content"
+    difficulty: easy
+    domain: contextual_policy
+    grader: ContextualPolicyGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_14
+    name: "Policy Update Application"
+    description: "Apply newly updated content policies correctly"
+    difficulty: medium
+    domain: contextual_policy
+    grader: ContextualPolicyGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_15
+    name: "Cross-Cultural Moderation"
+    description: "Moderate content considering cultural and regional context"
+    difficulty: medium
+    domain: contextual_policy
+    grader: ContextualPolicyGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_16
+    name: "Language-Aware Policy"
+    description: "Apply language-specific moderation guidelines"
+    difficulty: medium
+    domain: contextual_policy
+    grader: ContextualPolicyGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_17
+    name: "Appeal Case Review"
+    description: "Review an appeal and decide whether to overturn the original decision"
+    difficulty: hard
+    domain: contextual_policy
+    grader: ContextualPolicyGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_18
+    name: "Trust Score Assessment"
+    description: "Assign user trust scores based on behavior patterns"
+    difficulty: hard
+    domain: contextual_policy
+    grader: ContextualPolicyGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_19
+    name: "False Positive Recovery"
+    description: "Identify and correct false positive moderation decisions"
+    difficulty: hard
+    domain: contextual_policy
+    grader: ContextualPolicyGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_20
+    name: "Evolving Policy Compliance"
+    description: "Moderate under changing policies with backward compatibility"
+    difficulty: hard
+    domain: contextual_policy
+    grader: ContextualPolicyGrader
+    reward_range: [0.01, 0.99]
+
+  # ═══ DOMAIN 3: THREAT ASSESSMENT (Tasks 21─30) ═══
+  - id: task_21
+    name: "Bot Network Detection"
+    description: "Identify automated bot accounts in coordinated campaigns"
+    difficulty: easy
+    domain: threat_assessment
+    grader: ThreatAssessmentGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_22
+    name: "Spam Campaign Detection"
+    description: "Detect organized spam campaigns across multiple accounts"
+    difficulty: easy
+    domain: threat_assessment
+    grader: ThreatAssessmentGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_23
+    name: "Harassment Network Mapping"
+    description: "Identify coordinated harassment targeting individuals"
+    difficulty: medium
+    domain: threat_assessment
+    grader: ThreatAssessmentGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_24
+    name: "Misinformation Cascade"
+    description: "Track and assess spreading misinformation chains"
+    difficulty: medium
+    domain: threat_assessment
+    grader: ThreatAssessmentGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_25
+    name: "Coordinated Inauthentic Behavior"
+    description: "Detect state-sponsored or organized inauthentic accounts"
+    difficulty: medium
+    domain: threat_assessment
+    grader: ThreatAssessmentGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_26
+    name: "Viral Threat Assessment"
+    description: "Assess rapidly spreading dangerous content"
+    difficulty: hard
+    domain: threat_assessment
+    grader: ThreatAssessmentGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_27
+    name: "Cross-Platform Threat"
+    description: "Detect threats that span multiple platforms"
+    difficulty: hard
+    domain: threat_assessment
+    grader: ThreatAssessmentGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_28
+    name: "Deepfake & Manipulation"
+    description: "Identify synthetically generated or manipulated media"
+    difficulty: hard
+    domain: threat_assessment
+    grader: ThreatAssessmentGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_29
+    name: "Extremism Detection"
+    description: "Detect radicalization patterns and extremist content"
+    difficulty: hard
+    domain: threat_assessment
+    grader: ThreatAssessmentGrader
+    reward_range: [0.01, 0.99]
+
+  - id: task_30
+    name: "Full Threat Response"
+    description: "Complete threat assessment with detection, severity, response plan, and confidence"
+    difficulty: hard
+    domain: threat_assessment
+    grader: ThreatAssessmentGrader
+    reward_range: [0.01, 0.99]

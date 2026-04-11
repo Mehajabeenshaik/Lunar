@@ -1,751 +1,335 @@
----
-title: Content Moderation Benchmark
-colorFrom: red
-colorTo: pink
-sdk: docker
-pinned: true
----
+# 🌙 Lunar — Content Moderation Benchmark
 
-# Content Moderation Benchmark
+> **Train agents to moderate content like Meta engineers — with context, nuance, and accountability.**
 
-**A production-grade RL benchmark for Meta Content Moderation at Billion-Scale**
+A multi-turn RL environment for benchmarking AI agents on real-world content moderation. 30 tasks across 3 domains, with progressive context reveal, rich partial-credit reward shaping, and domain-specific graders.
 
-> "What environment would make a Meta AI researcher stop and say 'we should have built this'?"
-> 
-> **Answer:** A benchmark for content moderation — exactly what Meta does billions of times daily on Facebook, Instagram, and Threads.
+[![OpenEnv v1](https://img.shields.io/badge/OpenEnv-v1-blue)](https://openenv.dev)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-green)](https://python.org)
+[![Pydantic v2](https://img.shields.io/badge/Pydantic-v2-purple)](https://pydantic.dev)
+[![Docker Ready](https://img.shields.io/badge/Docker-Ready-blue)](https://docker.com)
 
 ---
 
-## 🎯 Why Content Moderation?
+## Architecture
 
-| Reason | Impact |
-|--------|--------|
-| **Meta's #1 Real Problem** | Daily moderation of billions of posts across all platforms |
-| **PyTorch-Native** | Content moderation models trained in PyTorch at Meta scale |
-| **Research Resonance** | Meta employees personally built these systems |
-| **Real-World Impact** | Affects billions of users and platform safety |
-| **Unique Benchmark** | No other team building this at the hackathon |
-
----
-
-## 📋 The 3 Tasks (Easy → Hard)
-
-### Task 1: Post Classification ⚡
-**Difficulty:** Easy  
-**What the Agent Does:** Classify a post into one of 4 categories
-
-- **Safe** — Normal post, no safety concerns
-- **Hate Speech** — Targets protected characteristics
-- **Spam** — Unwanted commercial content proliferation ads
-- **Misinformation** — False/misleading information spreading
-
-**Reward Signal:**
 ```
-Exact Match = 1.0 if correct
-            = 0.0 if wrong
+┌─────────────────────────────────────────────────────────────┐
+│                   Lunar Benchmark v3.0                       │
+├─────────────┬──────────────────┬────────────────────────────┤
+│  Domain 1   │    Domain 2      │        Domain 3            │
+│  Text       │    Contextual    │        Threat              │
+│  Classification │  Policy      │        Assessment          │
+│  (Tasks 1-10)│  (Tasks 11-20) │        (Tasks 21-30)       │
+├─────────────┼──────────────────┼────────────────────────────┤
+│ Category +  │ Policy compliance│ Detection + severity       │
+│ Severity +  │ + context usage  │ + response plan            │
+│ Reasoning   │ + edge cases     │ + confidence calibration   │
+├─────────────┴──────────────────┴────────────────────────────┤
+│         Multi-Turn Episodes (5 steps, weighted scoring)      │
+│         Progressive Context Reveal + Grader Feedback         │
+├──────────────────────────────────────────────────────────────┤
+│         Pydantic v2 Typed Models (OpenEnv Spec)              │
+│         FastAPI + Uvicorn (port 7860)                        │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-**Why It Matters:** Foundation of content safety systems
+---
+
+## Key Features
+
+| Feature | Details |
+|---------|---------|
+| **3 Distinct Domains** | Text Classification, Contextual Policy, Threat Assessment |
+| **30 Tasks** | 10 per domain, easy → medium → hard difficulty gradient |
+| **Multi-Turn Episodes** | 5-step episodes with grader feedback after each step |
+| **Progressive Context** | More context revealed each step (author history, policies, threat signals) |
+| **Rich Partial Credit** | 7 tiers of reward shaping per domain (not binary pass/fail) |
+| **Weighted Scoring** | Later steps worth more (agent should improve from feedback) |
+| **Typed Models** | Pydantic v2 Observation/Action/Reward models |
+| **OpenEnv v1 Spec** | Full `reset()` / `step()` / `state()` compliance |
+| **Deterministic Graders** | 3 domain-specific graders with distinct evaluation mechanics |
 
 ---
 
-### Task 2: Classification with Reasoning 🎓
-**Difficulty:** Medium  
-**What the Agent Does:** 
-1. Classify the post
-2. Provide reasoning for the decision  
-3. Assign severity score (1-5, where 5 is most severe)
+## Domains & Difficulty Gradient
 
-**Reward Signal:**
-```
-Score = 0.5 * category_accuracy + 0.5 * severity_accuracy
+### Domain 1: Text Classification (Tasks 1-10)
+Classify social media posts by category, severity, and reasoning quality.
 
-Severity: Exact match = 1.0
-          Off by ±1  = 0.5
-          Off by >1  = 0.0
-```
+| Task | Name | Difficulty |
+|------|------|-----------|
+| 1 | Basic Post Classification | Easy |
+| 2 | Spam Detection with Severity | Easy |
+| 3 | Hate Speech Classification | Easy |
+| 4 | Misinformation Flagging | Medium |
+| 5 | Multi-label Classification | Medium |
+| 6 | Severity Calibration | Medium |
+| 7 | Nuanced Classification | Hard |
+| 8 | Context-Dependent Classification | Hard |
+| 9 | Sarcasm-Aware Classification | Hard |
+| 10 | Full Classification Pipeline | Hard |
 
-**Why It Matters:** Differentiates minor vs critical violations
+### Domain 2: Contextual Policy Enforcement (Tasks 11-20)
+Moderate content considering author history, cultural context, and policy exceptions.
+
+| Task | Name | Difficulty |
+|------|------|-----------|
+| 11 | Author History Review | Easy |
+| 12 | New Account Screening | Easy |
+| 13 | Trending Topic Exceptions | Easy |
+| 14 | Policy Update Application | Medium |
+| 15 | Cross-Cultural Moderation | Medium |
+| 16 | Language-Aware Policy | Medium |
+| 17 | Appeal Case Review | Hard |
+| 18 | Trust Score Assessment | Hard |
+| 19 | False Positive Recovery | Hard |
+| 20 | Evolving Policy Compliance | Hard |
+
+### Domain 3: Threat Assessment & Response (Tasks 21-30)
+Detect coordinated attacks, misinformation cascades, and harassment networks.
+
+| Task | Name | Difficulty |
+|------|------|-----------|
+| 21 | Bot Network Detection | Easy |
+| 22 | Spam Campaign Detection | Easy |
+| 23 | Harassment Network Mapping | Medium |
+| 24 | Misinformation Cascade | Medium |
+| 25 | Coordinated Inauthentic Behavior | Medium |
+| 26 | Viral Threat Assessment | Hard |
+| 27 | Cross-Platform Threat | Hard |
+| 28 | Deepfake & Manipulation | Hard |
+| 29 | Extremism Detection | Hard |
+| 30 | Full Threat Response | Hard |
 
 ---
 
-### Task 3: Full Moderation Decision 🏆
-**Difficulty:** Hard  
-**What the Agent Does:**
-1. Classify the post
-2. Assign severity (1-5)
-3. Choose action: **keep** / **warn** / **remove** / **escalate**
-4. Provide explanation
+## Reward Shaping
 
-**Reward Signal:**
+All scores are strictly in **(0, 1)** — never 0.0 or 1.0.
+
+### Text Classification Reward Tiers
 ```
-Score = 0.25 * category_correct
-      + 0.25 * severity_accurate  
-      + 0.25 * action_appropriate
-      + 0.25 * explanation_quality
+0.05  Empty / invalid response
+0.15  Valid format but wrong category
+0.30  Correct category, wrong severity (off by 2+)
+0.50  Correct category, close severity (off by 1)
+0.70  Correct category + exact severity, weak reasoning
+0.85  All correct with good reasoning
+0.95  Perfect: all correct + expert-level reasoning with policy citations
 ```
 
-**Why It Matters:**  Production moderation requires all four decisions
+### Contextual Policy Reward Tiers
+```
+0.05  No meaningful response
+0.20  Response ignores context entirely
+0.40  Correct base decision but no context reference
+0.60  Good decision with some context awareness
+0.80  Correct with strong context integration
+0.95  Expert: considers edge cases, cultural factors, policy exceptions
+```
+
+### Threat Assessment Reward Tiers
+```
+0.05  No meaningful response
+0.15  Response doesn't address threat detection
+0.30  Detected threat presence correctly
+0.50  Correct detection + severity in right range
+0.70  Detection + severity + reasonable response plan
+0.85  Comprehensive: detection + severity + response + confidence
+0.95  Expert: all above + network analysis + escalation protocol
+```
 
 ---
 
-##  Quick Start
+## Observation & Action Spaces
 
-### Live API
-Try immediately (no installation):
+### Observation (returned by `/reset` and `/step`)
+```json
+{
+  "session_id": "a1b2c3d4e5f67890",
+  "task_id": "task_1",
+  "domain": "text_classification",
+  "difficulty": "easy",
+  "title": "Basic Post Classification",
+  "description": "Classify the post as safe, hate_speech, spam, or misinformation.",
+  "post": {
+    "text": "Just launched my startup! Check it out at totally-legit.ru...",
+    "engagement": 12345,
+    "author": "user_4321",
+    "timestamp": "2026-04-11T12:00:00"
+  },
+  "step_number": 0,
+  "max_steps": 5,
+  "action_space": {
+    "category": ["safe", "hate_speech", "spam", "misinformation", "harassment", "violence"],
+    "severity": "integer 1-5",
+    "action": ["keep", "label", "warn", "remove", "escalate", "ban"],
+    "reasoning": "string explaining your decision"
+  },
+  "feedback": null,
+  "previous_scores": null
+}
+```
+
+### Action (sent to `/step`)
+
+**Domain 1 — Text Classification:**
+```json
+{
+  "category": "spam",
+  "severity": 3,
+  "action": "remove",
+  "reasoning": "This post contains a suspicious URL and uses pressure tactics typical of spam. The urgency and promise of fast money are red flags."
+}
+```
+
+**Domain 2 — Contextual Policy:**
+```json
+{
+  "category": "misinformation",
+  "action": "label",
+  "policy_exception": false,
+  "reasoning": "Author has 2 prior violations and the claim contradicts WHO data. No newsworthy exception applies."
+}
+```
+
+**Domain 3 — Threat Assessment:**
+```json
+{
+  "is_coordinated": true,
+  "threat_level": "high",
+  "category": "misinformation",
+  "action": "escalate",
+  "confidence": 0.85,
+  "reasoning": "Multiple accounts with similar creation dates posting identical content. IP overlap detected. Escalate to trust & safety team for coordinated campaign investigation."
+}
+```
+
+---
+
+## API Reference
+
+### `POST /reset`
+Start a new episode.
 ```bash
-curl http://localhost:7860/
-
-# Or visit interactive docs:
-# http://localhost:7860/docs
+curl -X POST http://localhost:7860/reset \
+  -H "Content-Type: application/json" \
+  -d '{"task_id": 1}'
 ```
 
-### Docker (Recommended)
+### `POST /step`
+Submit an action and receive reward + feedback.
 ```bash
-# Clone and build
-git clone https://github.com/Mehajabeenshaik/content-moderation.git
-cd content-moderation
-
-# Build and run
-docker build -t content-mod:latest .
-docker run -p 7860:7860 content-mod:latest
-
-# Access at http://localhost:7860
+curl -X POST http://localhost:7860/step \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": "YOUR_SESSION_ID",
+    "action": {
+      "category": "spam",
+      "severity": 3,
+      "action": "remove",
+      "reasoning": "Suspicious URL with urgency tactics."
+    }
+  }'
 ```
 
-### Python Install
+### `GET /state`
+Get environment state.
 ```bash
-# Clone
-git clone https://github.com/Mehajabeenshaik/content-moderation.git
-cd content-moderation
+curl http://localhost:7860/state
+```
 
+### `GET /health`
+Health check (validates all 30 tasks produce valid scores).
+```bash
+curl http://localhost:7860/health
+```
+
+---
+
+## Quick Start
+
+### Local Development
+```bash
 # Install dependencies
 pip install -r requirements.txt
 
-# Run server
-python -m uvicorn app:app --host 0.0.0.0 --port 7860
-```
-
----
-
-## 🔌 API Reference
-
-### Start a Session
-```bash
-POST /session/start
-Content-Type: application/json
-
-{
-  "task_id": 1,
-  "seed": 42
-}
-
-Response:
-{
-  "session_id": "abc123def456",
-  "task_id": 1,
-  "observation": {
-    "task": "classification",
-    "post": {
-      "id": "post_123",
-      "text": "...",
-      "author": "user_456",
-      "engagement": 1234
-    },
-    "action_space": ["safe", "hate_speech", "spam", "misinformation"]
-  }
-}
-```
-
-### Execute Step
-```bash
-POST /session/{session_id}/step
-Content-Type: application/json
-
-{
-  "action": {
-    "category": "spam",
-    "severity": 2,
-    "action": "warn",
-    "reasoning": "Commercial solicitation"
-  }
-}
-
-Response:
-{
-  "observation": {...next post...},
-  "reward": 0.85,
-  "done": false,
-  "info": {
-    "session_id": "abc123def456",
-    "step": 1,
-    "post_id": "post_124"
-  }
-}
-```
-
-### Get Session Summary
-```bash
-GET /session/{session_id}/summary
-
-Response:
-{
-  "session_id": "abc123def456",
-  "summary": {
-    "task_id": 1,
-    "task_name": "Post Classification",
-    "total_steps": 50,
-    "average_reward": 0.84,
-    "max_reward": 1.0,
-    "min_reward": 0.0
-  }
-}
-```
-
-### List Available Tasks
-```bash
-GET /tasks
-
-Response:
-{
-  "tasks": [
-    {
-      "id": 1,
-      "name": "Post Classification",
-      "difficulty": "easy",
-      "reward_metric": "Exact match"
-    },
-    ...
-  ]
-}
-```
-
-### Full Endpoint List
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| GET | `/` | Health check |
-| GET | `/manifest` | OpenEnv specification |
-| GET | `/tasks` | List all tasks |
-| GET | `/stats` | Benchmark statistics |
-| POST | `/session/start` | Create new session |
-| POST | `/session/{id}/step` | Execute action |
-| GET | `/session/{id}/summary` | Episode summary |
-| DELETE | `/session/{id}` | Delete session |
-
----
-
-## 📊 Environment Details
-
-### Observation Space
-```json
-{
-  "task": "classification|classification_with_reasoning|full_moderation",
-  "post": {
-    "id": "post_uuid",
-    "text": "Post content",
-    "author": "author_id",
-    "timestamp": 1234567890.0,
-    "engagement": 5000
-  },
-  "categories": ["safe", "hate_speech", "spam", "misinformation"],
-  "severity_range": [1, 2, 3, 4, 5],
-  "actions": ["keep", "warn", "remove", "escalate"]
-}
-```
-
-### Action Space
-**Task 1 (Easy):**
-```json
-{"category": "safe|hate_speech|spam|misinformation"}
-```
-
-**Task 2 (Medium):**
-```json
-{
-  "category": "safe|hate_speech|spam|misinformation",
-  "reasoning": "Brief explanation",
-  "severity": 1-5
-}
-```
-
-**Task 3 (Hard):**
-```json
-{
-  "category": "safe|hate_speech|spam|misinformation",
-  "severity": 1-5,
-  "action": "keep|warn|remove|escalate",
-  "reasoning": "Detailed explanation"
-}
-```
-
-### Reward Range
-All tasks return rewards in range **[0.0, 1.0]**:
-- **1.0** = Perfect decision
-- **0.5** = Partially correct
-- **0.0** = Incorrect
-
----
-
-##  Testing
-
-### Basic Test
-```bash
-python -m pytest tests/test_basic.py -v
-```
-
-### Full Test Suite
-```bash
-python -m pytest tests/ -v --cov=content_moderation_env
-```
-
-### Manual Test
-```python
-from content_moderation_env import ContentModerationEnv
-
-# Create environment
-env = ContentModerationEnv(task_id=1, seed=42)
-
-# Reset and get initial observation
-obs = env.reset()
-
-# Take action
-action = {"category": "spam"}
-next_obs, reward, done, info = env.step(action)
-
-print(f"Reward: {reward}")
-print(f"Episode Summary: {env.get_episode_summary()}")
-```
-
----
-
-## 🏗️ Architecture
-
-```
-content_moderation_env/
-├── __init__.py           # Package exports
-├── environment.py        # Main ContentModerationEnv class
-├── tasks.py             # Task definitions (1, 2, 3)
-└── models.py            # Pydantic data models
-
-app.py                    # FastAPI server
-openenv.yaml              # OpenEnv v1 specification  
-requirements.txt          # Dependencies
-Dockerfile                # Docker containerization
-docker-compose.yml        # Compose configuration
-```
-
----
-
-##  Deployment
-
-### GitHub
-```bash
-git add .
-git commit -m "Content Moderation Benchmark for Meta Hackathon"
-git push origin main
-```
-
-### HuggingFace Spaces
-Connect your GitHub repo to HF Spaces:
-1. Create Space: https://huggingface.co/new-space
-2. Select Docker SDK
-3. Connect your GitHub repository
-4. Auto-deployed on every push!
-
----
-
-## 📈 Benchmark Specifications
-
-| Specification | Value |
-|---------------|-------|
-| **Tasks** | 3 (Easy, Medium, Hard) |
-| **Reward Range** | [0.0, 1.0] |
-| **OpenEnv Version** | 1.0 |
-| **Runtime** | Docker |
-| **API Framework** | FastAPI |
-| **Port** | 7860 |
-| **Python Version** | 3.8+ |
-| **PyTorch** | 2.1.1+ |
-
----
-
-## 🎯 Why Meta Will Love This
-
-1. **Directly Solves Their Problem** — Content moderation at billion-scale
-2. **Research-Grade** — Publishable idea Meta researchers would cite
-3. **PyTorch-Native** — TorchRL multi-agent benchmarks align perfectly
-4. **Production-Grade** — Real observation/reward signals
-5. **Unique** — No other hackathon team building this
-6. **Immediate Impact** — Meta already solved the domain, so judges know it's meaningful
-
----
-
-## 📚 References
-
-- OpenEnv Specification: https://github.com/openenv-foundation/openenv
-- FastAPI Documentation: https://fastapi.tiangolo.com/
-- PyTorch: https://pytorch.org/
-- Meta AI Research: https://ai.meta.com/
-
----
-
-## 📝 License
-
-MIT License
-
----
-
-## 🤝 Contributing
-
-Contributions welcome! Submit issues and pull requests to GitHub.
-
----
-
-**Built for Meta PyTorch Hackathon 2026** 
-
-| Domain | Count | Difficulty Mix | Status |
-|--------|-------|-----------------|--------|
-| **Warehouse Management** | 6 | Novice→Extreme |
-| **Data Pipeline** | 8 | Simple→Complex | 
-| **Code Review** | 8 | Compliance→Integration |
-| **Resource Allocation** | 5 | Simple→Complex | 
-| **System Optimization** | 5 | Basic→Advanced | 
-| **TOTAL** | **32** | **Balanced** | 
-
----
-
-##  API Reference
-
-### Core Endpoints
-
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| `POST` | `/reset` | Initialize new environment with task |
-| `POST` | `/step` | Execute action in current session |
-| `GET` | `/state/{session_id}` | Query current session state |
-| `GET` | `/manifest` | Get OpenEnv v1 specification |
-| `GET` | `/tasks` | List all 32 available tasks |
-| `GET` | `/sessions` | Active sessions summary |
-| `GET` | `/leaderboard` | Performance rankings |
-| `GET` | `/health` | API health status |
-| `GET` | `/docs` | Interactive Swagger documentation |
-
-### Reset Environment (Start Session)
-
-```bash
-curl -X POST https://mehajabeen-lunar.hf.space/reset \
-  -H "Content-Type: application/json" \
-  -d '{"task": "warehouse_novice"}'
-```
-
-**Response:**
-```json
-{
-  "observation": {...},
-  "task": "warehouse_novice",
-  "session_id": "7f8a2c0e-4b15-4d20-a8c0-9f1e3b2d5c6a"
-}
-```
-
-### Execute Action (Step)
-
-```bash
-curl -X POST "https://mehajabeen-lunar.hf.space/step?session_id=7f8a2c0e-4b15-4d20-a8c0-9f1e3b2d5c6a" \
-  -H "Content-Type: application/json" \
-  -d '{"action": {"reorder_quantities": [50]}}'
-```
-
-**Response:**
-```json
-{
-  "observation": {...},
-  "reward": 0.75,
-  "done": false,
-  "info": {"service_level": 0.95}
-}
-```
-
-### Python Example
-
-```python
-import requests
-
-# Initialize session
-reset_res = requests.post(
-    "https://mehajabeen-lunar.hf.space/reset",
-    json={"task": "warehouse_novice"}
-)
-session_id = reset_res.json()["session_id"]
-
-# Execute episode
-rewards = []
-for step_num in range(100):
-    action = {"reorder_quantities": [50]}  # Your agent's action
-    
-    step_res = requests.post(
-        f"https://mehajabeen-lunar.hf.space/step?session_id={session_id}",
-        json={"action": action}
-    )
-    
-    result = step_res.json()
-    rewards.append(result["reward"])
-    
-    if result["done"]:
-        break
-
-print(f"Episode score: {sum(rewards) / len(rewards):.4f}")
-```
-
----
-
-##  Architecture
-
-### System Components
-
-```
-┌────────────────────────────────────────────────────────┐
-│  FastAPI Server (api.py)                               │
-│  • Port 7860 (HF Spaces compatible)                    │
-│  • 9 REST endpoints, OpenEnv v1 compliant             │
-└────────────────────────────────────────────────────────┘
-                         ↓
-┌────────────────────────────────────────────────────────┐
-│  Session Manager                                        │
-│  • Concurrent session tracking (1000+)                │
-│  • SQLite persistence layer                           │
-│  • 24-hour timeout management                         │
-└────────────────────────────────────────────────────────┘
-                         ↓
-┌────────────────────────────────────────────────────────┐
-│  Multi-Domain Environment (multi_domain_env.py)        │
-│  • 32 Tasks across 5 domains                          │
-│  • Deterministic step execution                       │
-│  • Episode reward calculation [0.001, 0.999]          │
-└────────────────────────────────────────────────────────┘
-                         ↓
-┌────────────────────────────────────────────────────────┐
-│  Comprehensive Grader (graders_comprehensive.py)       │
-│  • Domain-specific scoring logic                      │
-│  • Epsilon-margin validation (0.001-0.999)            │
-│  • NaN/Infinity handling                              │
-└────────────────────────────────────────────────────────┘
-```
-
-### Score Validation Pipeline
-
-LUNAR implements **4-level score validation** to ensure strict adherence to (0, 1) bounds:
-
-1. **Grader Level** - Domain-specific scorers with epsilon margins
-2. **Environment Level** - Episode reward calculation with clamping
-3. **Inference Level** - Step rewards validated before logging
-4. **API Level** - Response fields validated before transmission
-
-**Validation Logic:**
-```python
-# Ensure all scores strictly in (0, 1)
-validated_score = np.clip(raw_score, 0.001, 0.999)
-if np.isnan(validated_score) or np.isinf(validated_score):
-    validated_score = 0.5  # Safe default
-```
-
-### Key Features
-
-**OpenEnv v1 Compliance** - Standardized spec, deterministic rewards, task registry  
-**Production-Ready** - Type-safe Pydantic, error handling, request validation  
-**Scalable** - Session persistence, multi-worker support, real-time leaderboard  
-**Validated** - Phase 1 ✓ Phase 2 ✓ Score validation ✓ All systems operational
-
----
-
-##  Deployment Options
-
-### Option 1: Live API (Recommended for Testing)
-Visit **[mehajabeen-lunar.hf.space](https://mehajabeen-lunar.hf.space)** to try the live API.
-- Interactive Swagger documentation at `/docs`
-- No installation required
-- Real-time leaderboard tracking
-- Full API access
-
-### Option 2: Local Development
-
-```bash
-# Clone and install
-git clone https://github.com/Mehajabeenshaik/Lunar.git
-cd Lunar
-pip install -e .
-
-# Start local server
+# Start the server
 python app.py
+# → Server running on http://localhost:7860
 
-# API available at http://localhost:7860
+# Test health
+curl http://localhost:7860/health
 ```
 
-### Option 3: Docker Deployment
-
+### Docker
 ```bash
-# Clone repository
-git clone https://github.com/Mehajabeenshaik/Lunar.git
-cd Lunar
+# Build
+docker build -t lunar-benchmark .
 
-# Build Docker image
-docker build -t lunar:latest .
+# Run
+docker run -p 7860:7860 lunar-benchmark
 
-# Run container
-docker run -p 7860:7860 lunar:latest
-
-# API available at http://localhost:7860
+# Or with docker-compose
+docker-compose up
 ```
 
----
-
-##  Testing & Validation
-
-### Run Comprehensive Test Suite
+### Run Inference
 ```bash
-pytest tests_v2_enhanced.py -v --cov=warehouse_env
+export API_BASE_URL="https://api.openai.com/v1"
+export API_KEY="your-key"
+export MODEL_NAME="gpt-4"
+export ENVIRONMENT_HOST="http://localhost:7860"
 
-# Coverage report:
-# ✅ 35+ test methods
-# ✅ 95% code coverage
-# ✅ All 5 domains validated
-# ✅ Phase 2 inference passing
-```
-
-### Verify All Environment Episode Rewards
-
-```bash
-python test_env_rewards.py
-
-# Output:
-# ✓ warehouse_novice: 0.9500 - Valid
-# ✓ data_ingestion_simple: 0.9278 - Valid
-# ✓ code_style_compliance: 0.8343 - Valid
-# ✓ resource_budget_simple: 0.8105 - Valid
-# ✓ optimization_query_basic: 0.8587 - Valid
-# =====================================================
-# ✓ All environment episode rewards are strictly within (0, 1)
+python inference.py
 ```
 
 ---
 
-##  Documentation
+## Project Structure
 
-- [API Reference](https://mehajabeen-lunar.hf.space/docs) - Interactive Swagger documentation
-- [GitHub Repository](https://github.com/Mehajabeenshaik/Lunar) - Source code and issue tracking
-- [Architecture Details](warehouse_env/warehouse_env/multi_domain_env.py) - Multi-domain environment
-- [Task Specifications](warehouse_env/warehouse_env/task_config.py) - All 32 task definitions
-- [Grading System](warehouse_env/warehouse_env/graders_comprehensive.py) - Domain-specific scorers
-
----
-
-##  Interactive Swagger UI
-
-**Try the API instantly without coding!**
-
-### Live API Documentation
-- **Interactive Docs:** [mehajabeen-lunar.hf.space/docs](https://mehajabeen-lunar.hf.space/docs)
-- **Alternative (ReDoc):** [mehajabeen-lunar.hf.space/redoc](https://mehajabeen-lunar.hf.space/redoc)
-
-**Features:**
--  Complete endpoint documentation
--  Execute API calls directly from browser
--  Real-time request/response visualization
--  Explore all 32 task configurations
-
----
-
-##  Performance Benchmarks
-
-
-### Test Coverage
-
-| Metric | Value | Status |
-|--------|-------|--------|
-| **Test Methods** | 35+ |  Comprehensive |
-| **Code Coverage** | 95% |  Full coverage |
-| **Runtime Per Episode** | ~3 minutes |  Under 20min limit |
-| **Concurrent Sessions** | 1000+ |  Full async support |
-
----
-
-##  Technology Stack
-
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| **Framework** | FastAPI + Uvicorn | REST API server |
-| **Runtime** | Python 3.10+ | Core environment |
-| **Persistence** | SQLite | Session & leaderboard storage |
-| **Validation** | Pydantic v2 | Type-safe request handling |
-| **Testing** | Pytest | Comprehensive test suite |
-| **Deployment** | Docker | Containerized deployment |
-| **Docs** | Swagger/OpenAPI 3.0 | Interactive API documentation |
-
----
-
-##  Security & Validation
-
-### Score Validation
-
-LUNAR implements comprehensive score validation at 4 levels:
-
-- **Grader Level** - Domain-specific scorers with epsilon margins (0.001-0.999)
-- **Environment Level** - Episode reward calculation with clamping
-- **Inference Level** - Step-level validation before logging
-- **API Level** - Response field validation before transmission
-
-### Security Features
-
- **Input Validation** - All requests validated with Pydantic  
- **Error Handling** - Comprehensive exception catching  
- **Type Safety** - Full type hints throughout codebase  
-
----
-
-## 🔗 Community & Support
-
-| Channel | Purpose |
-|---------|---------|
-| **[GitHub Issues](https://github.com/Mehajabeenshaik/Lunar/issues)** | Bug reports & feature requests |
-| **[GitHub Discussions](https://github.com/Mehajabeenshaik/Lunar/discussions)** | Q&A and ideas |
-| **[Live API](https://mehajabeen-lunar.hf.space)** | Try immediately on HF Spaces |
-
----
-
-## Citation
-
-If you use LUNAR in your research, please cite:
-
-```bibtex
-@software{lunar2026,
-  title={LUNAR: Multi-Domain Reinforcement Learning Environment},
-  author={Mehajabeen Shaik},
-  url={https://github.com/Mehajabeenshaik/Lunar},
-  year={2026}
-}
+```
+lunar/
+├── app.py                          # FastAPI server (OpenEnv endpoints)
+├── models.py                       # Pydantic v2 typed models
+├── inference.py                    # Baseline agent (multi-turn LLM)
+├── openenv.yaml                    # OpenEnv spec manifest
+├── content_moderation_env/
+│   ├── __init__.py                 # Package exports
+│   ├── environment.py              # Multi-turn environment engine
+│   └── graders.py                  # 3 domain-specific graders
+├── tests/                          # Test & validation scripts
+├── Dockerfile                      # Docker deployment
+├── docker-compose.yml              # Compose config
+├── requirements.txt                # Python dependencies
+└── pyproject.toml                  # Project metadata
 ```
 
 ---
 
-##  License
+## Pre-Submission Checklist
 
-LUNAR is released under the **MIT License**. See [LICENSE](LICENSE) for details.
+| Check | Status |
+|-------|--------|
+| `openenv.yaml` present and valid | ✅ |
+| All 30 tasks produce scores in (0, 1) | ✅ |
+| `POST /reset` works | ✅ |
+| `POST /step` returns observation, reward, done, info | ✅ |
+| `GET /state` returns environment state | ✅ |
+| Multi-turn episodes (5 steps) | ✅ |
+| Progressive context reveal | ✅ |
+| Grader feedback per step | ✅ |
+| 3 distinct domain graders | ✅ |
+| Rich partial-credit (7 tiers per domain) | ✅ |
+| Pydantic v2 typed models | ✅ |
+| `inference.py` with baseline agent | ✅ |
+| Docker builds and runs | ✅ |
+| Difficulty gradient (easy → hard) | ✅ |
+| Weighted scoring (later steps worth more) | ✅ |
 
 ---
 
-<p align="center">
-  <strong>LUNAR: Illuminating the Path to Intelligent Agent Training</strong>
-  <br><br>
-  <a href="https://github.com/Mehajabeenshaik/Lunar"> Star on GitHub</a> · 
-  <a href="https://mehajabeen-lunar.hf.space"> Try Live API</a> · 
-  <a href="https://github.com/Mehajabeenshaik/Lunar/issues"> Report Issues</a>
-  <br><br>
-  
-</p>
----
-title: LUNAR - Multi-Domain RL Benchmark
-colorFrom: blue
-colorTo: purple
-sdk: docker
-pinned: true
----
+## License
 
+MIT License. Built for the OpenEnv Hackathon 2026.

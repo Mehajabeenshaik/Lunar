@@ -1,26 +1,18 @@
 #!/usr/bin/env python3
 """
-Content Moderation Benchmark - OPTIMIZED Inference Script (30 Tasks + Parallel Execution)
-Baseline agent with performance optimizations, caching, and parallel task execution
+Lunar Content Moderation Benchmark — Inference Script
+Multi-turn baseline agent for 30 tasks across 3 domains.
 
-OPTIMIZATIONS:
-- Prompt caching and template reuse
-- Parallel task execution (3x faster for independent tasks)
-- Reduce token usage by ~40% through concise prompts
-- Connection pooling for HTTP requests
-- Batch LLM calls where possible
-- Performance monitoring and metrics
+Mandatory env vars: API_BASE_URL, API_KEY (or OPENAI_API_KEY)
+Optional: MODEL_NAME, ENVIRONMENT_HOST, HF_TOKEN
 """
 
 import os
 import sys
 import json
 import time
-import hashlib
 from typing import Dict, List, Any, Tuple, Optional
 from dataclasses import dataclass
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import threading
 
 try:
     from openai import OpenAI
@@ -28,498 +20,336 @@ except ImportError:
     print("[ERROR] OpenAI package not found. Install with: pip install openai>=1.3.0")
     sys.exit(1)
 
-# ============ ENVIRONMENT CONFIGURATION - NO FALLBACKS ============
-# Validator injects these - must use os.environ[] (not getenv) to fail fast if missing
+# ============ ENVIRONMENT CONFIGURATION ============
 
 try:
     API_BASE_URL = os.environ["API_BASE_URL"]
-    API_KEY = os.environ["API_KEY"]
+    API_KEY = os.environ.get("API_KEY") or os.environ.get("OPENAI_API_KEY") or os.environ.get("HF_TOKEN", "")
 except KeyError as e:
     print(f"[ERROR] Missing required environment variable: {e}", file=sys.stderr)
     sys.exit(1)
 
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
-BENCHMARK = "content-moderation-benchmark"
+BENCHMARK = "lunar-content-moderation-benchmark"
 ENVIRONMENT_HOST = os.getenv("ENVIRONMENT_HOST", "http://localhost:7860")
-
-# ============ INITIALIZE OPENAI CLIENT AT MODULE LEVEL ============
-# Must be at module level so validator can track ALL API calls through this instance
-
-client = OpenAI(
-    base_url=API_BASE_URL,
-    api_key=API_KEY,
-)
-
-BENCHMARK = "content-moderation-benchmark"
-ENVIRONMENT_HOST = os.getenv("ENVIRONMENT_HOST", "http://localhost:7860")
-MAX_STEPS = 8
+MAX_STEPS = 5
 MAX_RETRIES = 3
-ENABLE_PARALLEL = True
-MAX_WORKERS = 3  # Parallel workers across task groups
 
+# ============ OPENAI CLIENT ============
+
+client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+
+# ============ TASK METADATA ============
+
+TASK_NAMES = {
+    1: "BasicClassification", 2: "SpamDetection", 3: "HateSpeech",
+    4: "Misinformation", 5: "MultiLabel", 6: "SeverityCalibration",
+    7: "NuancedClassification", 8: "ContextDependent", 9: "SarcasmAware",
+    10: "FullPipeline", 11: "AuthorHistory", 12: "NewAccountScreening",
+    13: "TrendingTopicExceptions", 14: "PolicyUpdate", 15: "CrossCultural",
+    16: "LanguageAware", 17: "AppealReview", 18: "TrustScore",
+    19: "FalsePositiveRecovery", 20: "EvolvingPolicy", 21: "BotNetwork",
+    22: "SpamCampaign", 23: "HarassmentNetwork", 24: "MisinfoDisinfoCascade",
+    25: "CoordinatedInauthentic", 26: "ViralThreat", 27: "CrossPlatformThreat",
+    28: "DeepfakeManipulation", 29: "ExtremismDetection", 30: "FullThreatResponse",
+}
+
+TASK_DOMAINS = {
+    i: ("text_classification" if i <= 10 else
+        "contextual_policy" if i <= 20 else
+        "threat_assessment")
+    for i in range(1, 31)
+}
+
+
+# ============ SCORE CLAMPING ============
 
 def clamp_score(value: Any) -> float:
-    """Ensure score is strictly within (0, 1) and safe for validator parsing."""
     try:
         score = float(value)
     except (TypeError, ValueError):
         return 0.5
-    if score <= 0.0 or score == 0.0:
-        return 0.001
-    if score >= 1.0 or score == 1.0:
-        return 0.999
-    # Final safety check
-    if not (0 < score < 1):
+    if score <= 0.0:
+        return 0.01
+    if score >= 1.0:
+        return 0.99
+    if score != score:  # NaN
         return 0.5
-    return score
-
-# ============ PERFORMANCE METRICS ============
-
-@dataclass
-class PerformanceMetrics:
-    """Track performance improvements"""
-    task_id: int
-    start_time: float
-    end_time: float = 0.0
-    tokens_used: int = 0
-    cache_hits: int = 0
-    api_calls: int = 0
-    
-    @property
-    def duration(self):
-        return self.end_time - self.start_time if self.end_time else 0
-    
-    @property
-    def efficiency_score(self):
-        """Lower is better: tokens_used / duration"""
-        return self.tokens_used / max(self.duration, 0.1) if self.duration else 0
+    return round(score, 4)
 
 
-# ============ PROMPT TEMPLATE CACHE ============
+# ============ LOGGING (OpenEnv format) ============
 
-class PromptCache:
-    """Cache and reuse structured prompts to reduce token usage"""
-    
-    TEMPLATES = {
-        "task_1": """Classify: "{text}" -> [safe|hate_speech|spam|misinformation]""",
-        "task_2": """Classify "{text}" with severity 1-5. JSON: {{"category":"...","severity":<1-5>}}""",
-        "task_3": """Moderate "{text}": category, severity 1-5, action [keep|warn|remove|escalate], reasoning. JSON format.""",
-        "task_4": """Author violations: {violations}, age: {age}d, followers: {followers}. 
-                    Post: "{text}". JSON: {{"category":"...","severity":<1-5>,"reasoning":"..."}}""",
-        "task_5": """Topic: {topic}. Policy: {policy}. Post: "{text}". 
-                    JSON: {{"category":"...","action":"...", "policy_exception":true/false}}""",
-        "task_6": """Appeal review. Original: {original}. Reason: {reason}. JSON: {{"verdict":"uphold|reverse","reasoning":"..."}}""",
-        "task_7": """False positive? Original flag: {flag}. Context: {context}. Post: "{text}". 
-                    JSON: {{"is_false_positive":true/false,"category":"...","action":"..."}}""",
-        "task_8": """Tone analysis. Target: {target}. Context: {context}. Post: "{text}". 
-                    JSON: {{"tone":"sarcastic|constructive|neutral","severity":<1-5>}}""",
-        "task_9": """Coordinated behavior network. Links: {links}. Posts: {posts_count}. 
-                    JSON: {{"is_coordinated":true/false,"confidence":<0-1>,"reasoning":"..."}}"""
-    }
-    
-    def __init__(self):
-        self.cache = {}
-        self.hits = 0
-        self.misses = 0
-    
-    def get_prompt(self, task_id: int, **params) -> Tuple[str, bool]:
-        """Get cached prompt or generate new one"""
-        cache_key = hashlib.md5(
-            f"task_{task_id}_{json.dumps(params, sort_keys=True)}".encode()
-        ).hexdigest()
-        
-        if cache_key in self.cache:
-            self.hits += 1
-            return self.cache[cache_key], True
-        
-        self.misses += 1
-        template = self.TEMPLATES.get(f"task_{task_id}", "")
-        try:
-            prompt = template.format(**params)
-        except KeyError:
-            prompt = template
-        
-        self.cache[cache_key] = prompt
-        return prompt, False
+def log_start(task: str, env: str = BENCHMARK, model: str = MODEL_NAME):
+    print(f"[START] task={task} env={env} model={model}", flush=True)
 
-
-# ============ CONNECTION POOLING ============
-
-class HTTPClientPool:
-    """Reuse HTTP connections across requests"""
-    
-    _instance = None
-    _lock = threading.Lock()
-    
-    def __new__(cls):
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = super().__new__(cls)
-        return cls._instance
-    
-    def __init__(self):
-        if not hasattr(self, 'session'):
-            import requests
-            from requests.adapters import HTTPAdapter
-            from urllib3.util.retry import Retry
-            
-            self.session = requests.Session()
-            retry = Retry(connect=3, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
-            adapter = HTTPAdapter(max_retries=retry, pool_connections=10, pool_maxsize=10)
-            self.session.mount("http://", adapter)
-            self.session.mount("https://", adapter)
-
-
-# ============ LOGGING UTILITIES (Optimized) ============
-
-def log_start(task_name: str, task_id: int) -> None:
-    """Emit [START] log line"""
-    print(f"[START] task={task_name} env={BENCHMARK} model={MODEL_NAME}", flush=True)
-
-
-def log_step(step_num: int, action: str, reward: float, done: bool, error: str = None, metrics: Optional[PerformanceMetrics] = None) -> None:
-    """Emit [STEP] log line with optional metrics"""
+def log_step(step: int, action: str, reward: float, done: bool, error=None):
     reward = clamp_score(reward)
-    action_str = str(action)[:100].replace('\n', ' ')  # Truncate and sanitize
-    error_str = f"{error}" if error else "null"
-    print(
-        f"[STEP] step={step_num} action={action_str!r} reward={reward:.3f} done={done} error={error_str}",
-        flush=True
-    )
+    action_short = str(action)[:120].replace('\n', ' ')
+    err = f"{error}" if error else "None"
+    print(f"[STEP] step={step} action={action_short!r} reward={reward:.4f} done={done} error={err}", flush=True)
+
+def log_end(success: bool, steps: int, score: float, rewards: List[float]):
+    score = clamp_score(score)
+    rewards_clamped = [clamp_score(r) for r in rewards]
+    rstr = "[" + ", ".join(f"{r:.2f}" for r in rewards_clamped) + "]"
+    print(f"[END] task={TASK_NAMES.get(current_task_id, 'unknown')} success={str(success).lower()} steps={steps} score={score:.4f} rewards={rstr}", flush=True)
+
+current_task_id = 1  # Track globally for log_end
 
 
-def log_end(success: bool, steps_taken: int, final_score: float, rewards: List[float], metrics: Optional[PerformanceMetrics] = None) -> None:
-    """Emit [END] log line with performance metrics"""
-    final_score = clamp_score(final_score)
-    rewards = [clamp_score(r) for r in rewards]
-    rewards_str = ",".join(f"{r:.3f}" for r in rewards)
-    print(
-        f"[END] success={success} steps={steps_taken} score={final_score:.3f} rewards={rewards_str}",
-        flush=True
-    )
+# ============ HTTP CLIENT ============
+
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+def make_session():
+    s = requests.Session()
+    retry = Retry(connect=3, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
+    adapter = HTTPAdapter(max_retries=retry, pool_connections=10, pool_maxsize=10)
+    s.mount("http://", adapter)
+    s.mount("https://", adapter)
+    return s
+
+http = make_session()
 
 
-# ============ ENVIRONMENT INTERACTION (Optimized) ============
+# ============ AGENT ============
 
-class OptimizedContentModerationAgent:
-    """Agent with inference optimizations: caching, batching, parallel execution"""
-    
-    def __init__(self):
-        """Initialize connection pool and caches."""
-        self.http_pool = HTTPClientPool()
-        self.prompt_cache = PromptCache()
-        self.session_id = None
-        self.episode_rewards = []
-        self.task_metrics = []
-        
-    def start_session(self, task_id: int) -> Dict[str, Any]:
-        """Start a new session with connection pooling"""
-        try:
-            response = self.http_pool.session.post(
-                f"{ENVIRONMENT_HOST}/session/start",
-                json={"task_id": task_id, "seed": int(time.time()) % 10000},
-                timeout=10
-            )
-            response.raise_for_status()
-            data = response.json()
-            self.session_id = data["session_id"]
-            return data.get("observation", {})
-        except Exception as e:
-            print(f"[ERROR] Failed to start session: {e}", file=sys.stderr)
-            raise
-    
-    def step_environment(self, action: Dict[str, str]) -> Tuple[Dict, float, bool, Dict]:
-        """Send action to environment with connection pooling"""
-        try:
-            response = self.http_pool.session.post(
-                f"{ENVIRONMENT_HOST}/session/{self.session_id}/step",
-                json={"action": action},
-                timeout=10
-            )
-            response.raise_for_status()
-            data = response.json()
-            return (
-                data.get("observation", {}),
-                clamp_score(data.get("reward", 0.5)),
-                data.get("done", False),
-                data.get("info", {})
-            )
-        except Exception as e:
-            print(f"[ERROR] Failed to step environment: {e}", file=sys.stderr)
-            raise
-    
-    def get_session_summary(self) -> Dict[str, Any]:
-        """Get final episode summary"""
-        try:
-            response = self.http_pool.session.get(
-                f"{ENVIRONMENT_HOST}/session/{self.session_id}/summary",
-                timeout=10
-            )
-            response.raise_for_status()
-            return response.json().get("summary", {})
-        except Exception as e:
-            print(f"[ERROR] Failed to get session summary: {e}", file=sys.stderr)
-            return {}
-    
-    def generate_action_with_caching(self, observation: Dict, task_id: int, step_num: int) -> Tuple[Dict[str, str], int]:
-        """Generate action using cached prompts - returns (action, tokens_used)"""
-        
-        post_text = observation.get("post", {}).get("text", "")[:100]  # Truncate for efficiency
-        post_engagement = observation.get("post", {}).get("engagement", 0)
-        tokens_estimate = 0
-        
-        # Use cached prompts with parameters
-        if task_id == 1:
-            prompt, cached = self.prompt_cache.get_prompt(task_id, text=post_text)
-            
-            response = client.chat.completions.create(
-                model=MODEL_NAME,
-                max_tokens=50,  # Reduced from default
-                messages=[{"role": "user", "content": prompt}]
-            )
-            
-            result = response.choices[0].message.content.strip().lower()
-            categories = ["safe", "hate_speech", "spam", "misinformation"]
-            category = next((c for c in categories if c in result), "safe")
-            tokens_estimate = len(prompt.split()) + 50
-            
-            return {"category": category}, tokens_estimate
-        
-        elif task_id == 2:
-            prompt, cached = self.prompt_cache.get_prompt(task_id, text=post_text)
-            
-            response = client.chat.completions.create(
-                model=MODEL_NAME,
-                max_tokens=80,
-                messages=[{"role": "user", "content": prompt}]
-            )
-            
-            try:
-                result = json.loads(response.choices[0].message.content.strip())
-                tokens_estimate = len(prompt.split()) + 80
-                return {
-                    "category": result.get("category", "safe").lower(),
-                    "severity": max(1, min(5, int(result.get("severity", 3))))
-                }, tokens_estimate
-            except:
-                return {"category": "safe", "severity": 3}, 130
-        
-        elif task_id == 3:
-            prompt, cached = self.prompt_cache.get_prompt(task_id, text=post_text)
-            
-            response = client.chat.completions.create(
-                model=MODEL_NAME,
-                max_tokens=150,
-                messages=[{"role": "user", "content": prompt}]
-            )
-            
-            try:
-                result = json.loads(response.choices[0].message.content.strip())
-                tokens_estimate = len(prompt.split()) + 150
-                return {
-                    "category": result.get("category", "safe").lower(),
-                    "severity": max(1, min(5, int(result.get("severity", 3)))),
-                    "action": result.get("action", "keep").lower(),
-                    "reasoning": result.get("reasoning", "")[:100]
-                }, tokens_estimate
-            except:
-                return {"category": "safe", "severity": 3, "action": "keep", "reasoning": ""}, 230
-        
-        # Tasks 4-9 (Domain 2 & 3) - simplified but effective
-        elif task_id in [4, 5, 6, 7, 8, 9]:
-            # Standard approach for all domain 2 & 3 tasks
-            response = client.chat.completions.create(
-                model=MODEL_NAME,
-                max_tokens=120,
-                messages=[{"role": "user", "content": f"Moderate content. Post: \"{post_text}\". Respond in JSON."}]
-            )
-            
-            try:
-                result = json.loads(response.choices[0].message.content.strip())
-                tokens_estimate = 100 + 120
-                return result, tokens_estimate
-            except:
-                return {"category": "safe", "severity": 3}, 220
-        
-        return {"category": "safe"}, tokens_estimate
-    
-    def run_task(self, task_id: int) -> Tuple[bool, float, PerformanceMetrics]:
-        """Run single task with performance tracking"""
-        metrics = PerformanceMetrics(task_id=task_id, start_time=time.time())
-        
-        try:
-            task_names = {
-                1: "Classification", 2: "Classification+Reasoning", 3: "FullModeration",
-                4: "AuthorHistory", 5: "TrendingTopic", 6: "AppealCase",
-                7: "FalsePositive", 8: "SarcasmDetection", 9: "CoordinatedBehavior",
-                10: "ImageSafety", 11: "VisualToxicity", 12: "MultimodalContext",
-                13: "DeepfakeDetection", 14: "SceneSafety", 15: "AuthorCredibility",
-                16: "BotDetection", 17: "InauthenticPatterns", 18: "MisinformationSpread",
-                19: "AppealFairness", 20: "UserTrust", 21: "CampaignDetection",
-                22: "ViralMisinformation", 23: "HarassmentNetwork", 24: "ContextCollapse",
-                25: "CrossPlatformConsistency", 26: "SatireVsHate", 27: "CulturalSensitivity",
-                28: "PolicyEvolution", 29: "MultiLanguageModeration", 30: "Accessibility"
-            }
-            log_start(task_names.get(task_id, f"Task{task_id}"), task_id)
-            
-            observation = self.start_session(task_id)
-            step_count = 0
-            success = False
-            final_reward = 0.001
-            
-            for step_num in range(1, MAX_STEPS + 1):
-                step_count = step_num
-                
-                try:
-                    action, tokens = self.generate_action_with_caching(observation, task_id, step_num)
-                    metrics.tokens_used += tokens
-                    metrics.api_calls += 1
-                    
-                    action_str = json.dumps(action)[:80]
-                    observation, reward, done, info = self.step_environment(action)
-                    
-                    reward = clamp_score(reward)
-                    log_step(step_num, action_str, reward, done, metrics=metrics)
-                    self.episode_rewards.append(reward)
-                    final_reward = reward
-                    
-                    if done:
-                        success = True
-                        break
-                
-                except Exception as e:
-                    log_step(step_num, "error", 0.001, True, str(e), metrics)
-                    break
-            
-            summary = self.get_session_summary()
-            final_score = clamp_score(summary.get("average_reward", final_reward))
-            
-            metrics.end_time = time.time()
-            log_end(success, step_count, final_score, self.episode_rewards, metrics)
-            
-            self.task_metrics.append(metrics)
-            return success, final_score, metrics
-        
-        except Exception as e:
-            print(f"[ERROR] Task {task_id} failed: {e}", file=sys.stderr)
-            metrics.end_time = time.time()
-            log_end(False, 0, 0.001, [0.001], metrics)
-            self.task_metrics.append(metrics)
-            return False, 0.001, metrics
+def build_prompt(observation: Dict, domain: str, step_num: int, feedback: str = "") -> str:
+    """Build domain-specific prompt from observation."""
+    post = observation.get("post", {})
+    post_text = post.get("text", "No content")[:200]
+    action_space = observation.get("action_space", {})
+
+    base = f"You are a content moderation expert. Analyze the following post and respond in JSON.\n\nPost: \"{post_text}\"\n"
+
+    if feedback and step_num > 1:
+        base += f"\n--- Feedback from previous step ---\n{feedback}\nPlease improve your response based on the feedback.\n---\n"
+
+    if domain == "text_classification":
+        base += f"""
+Respond with a JSON object:
+{{
+  "category": one of {action_space.get('category', ['safe','hate_speech','spam','misinformation'])},
+  "severity": integer 1-5 (1=none, 5=extreme),
+  "action": one of {action_space.get('action', ['keep','label','warn','remove','escalate','ban'])},
+  "reasoning": "brief explanation citing context, policy, or intent"
+}}"""
+
+    elif domain == "contextual_policy":
+        author_ctx = observation.get("author_context", {})
+        policy_ctx = observation.get("policy_context", {})
+        base += f"\nAuthor context: {json.dumps(author_ctx)[:200]}"
+        if policy_ctx:
+            base += f"\nPolicy context: {json.dumps(policy_ctx)[:200]}"
+        base += f"""
+Consider author history, active policies, and cultural context.
+Respond with JSON:
+{{
+  "category": one of {action_space.get('category', ['safe','hate_speech','spam','misinformation'])},
+  "action": one of {action_space.get('action', ['keep','label','warn','remove','escalate','ban'])},
+  "policy_exception": true/false,
+  "reasoning": "explain referencing author history, policy guidelines, cultural context"
+}}"""
+
+    elif domain == "threat_assessment":
+        threat_ctx = observation.get("threat_context", {})
+        base += f"\nThreat signals: {json.dumps(threat_ctx)[:200]}"
+        base += f"""
+Assess the threat level and coordination.
+Respond with JSON:
+{{
+  "is_coordinated": true/false,
+  "threat_level": one of {action_space.get('threat_level', ['none','low','medium','high','critical'])},
+  "category": one of {action_space.get('category', ['safe','spam','misinformation','harassment','hate_speech'])},
+  "action": one of {action_space.get('action', ['keep','label','warn','remove','escalate','ban'])},
+  "confidence": float 0.0-1.0,
+  "reasoning": "explain threat detection, severity assessment, and response plan"
+}}"""
+
+    return base
 
 
-# ============ PARALLEL EXECUTION ============
+def call_llm(prompt: str) -> str:
+    """Call the LLM with the prompt."""
+    try:
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            max_tokens=300,
+            temperature=0.3,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"[DEBUG] LLM call failed: {e}", file=sys.stderr)
+        return '{"category":"safe","severity":1,"action":"keep","reasoning":"fallback"}'
 
-def run_all_tasks_parallel(speed_factor: float = 1.0) -> Tuple[Dict, float, List[PerformanceMetrics]]:
-    """Run all 30 tasks with parallel group execution."""
-    
-    print("\n" + "="*60, file=sys.stderr)
-    print("LUNAR Optimized Baseline - 30 Tasks with Parallel Execution", file=sys.stderr)
-    print(f"Speed Factor: {speed_factor}x | Parallel Workers: {MAX_WORKERS}", file=sys.stderr)
-    print("="*60 + "\n", file=sys.stderr)
-    
-    task_results = {}
-    all_metrics = []
-    total_score = 0.0
-    start_time = time.time()
-    
-    if ENABLE_PARALLEL:
-        # Parallel execution: 3 balanced groups
-        domain_tasks = [
-            list(range(1, 11)),
-            list(range(11, 21)),
-            list(range(21, 31))
-        ]
-        
-        def run_domain(tasks):
-            agent = OptimizedContentModerationAgent()
-            domain_results = {}
-            for task_id in tasks:
-                try:
-                    success, score, metrics = agent.run_task(task_id)
-                    domain_results[task_id] = {
-                        "success": success,
-                        "score": score,
-                        "metrics": metrics
-                    }
-                except Exception as e:
-                    print(f"[ERROR] Domain task {task_id} failed: {e}", file=sys.stderr)
-                    domain_results[task_id] = {
-                        "success": False,
-                        "score": 0.001,
-                        "metrics": PerformanceMetrics(task_id=task_id, start_time=time.time())
-                    }
-            return domain_results
-        
-        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-            futures = [executor.submit(run_domain, domain) for domain in domain_tasks]
-            for future in as_completed(futures):
-                domain_results = future.result()
-                task_results.update(domain_results)
-                for task_id, result in domain_results.items():
-                    total_score += result["score"]
-                    all_metrics.append(result["metrics"])
-    
+
+def parse_action(response_text: str, domain: str) -> Dict:
+    """Parse LLM response into action dict."""
+    # Try to extract JSON from response
+    try:
+        # Find JSON in response
+        start = response_text.find('{')
+        end = response_text.rfind('}') + 1
+        if start >= 0 and end > start:
+            return json.loads(response_text[start:end])
+    except json.JSONDecodeError:
+        pass
+
+    # Fallback action by domain
+    if domain == "text_classification":
+        return {"category": "safe", "severity": 1, "action": "keep", "reasoning": "Unable to parse response."}
+    elif domain == "contextual_policy":
+        return {"category": "safe", "action": "keep", "policy_exception": False, "reasoning": "Unable to parse response."}
     else:
-        # Sequential fallback
-        agent = OptimizedContentModerationAgent()
-        for task_id in range(1, 31):
+        return {"is_coordinated": False, "threat_level": "none", "category": "safe",
+                "action": "keep", "confidence": 0.5, "reasoning": "Unable to parse response."}
+
+
+def run_episode(task_id: int) -> Tuple[bool, float, List[float]]:
+    """Run a single multi-turn episode."""
+    global current_task_id
+    current_task_id = task_id
+    domain = TASK_DOMAINS[task_id]
+    task_name = TASK_NAMES[task_id]
+
+    log_start(task=task_name)
+
+    rewards = []
+    success = False
+    steps_taken = 0
+
+    try:
+        # Reset environment
+        resp = http.post(f"{ENVIRONMENT_HOST}/reset", json={"task_id": task_id}, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        session_id = data["session_id"]
+        observation = data.get("observation", {})
+
+        feedback = ""
+
+        for step in range(1, MAX_STEPS + 1):
+            steps_taken = step
+
+            # Build prompt with feedback from previous step
+            prompt = build_prompt(observation, domain, step, feedback)
+
+            # Call LLM
+            llm_response = call_llm(prompt)
+
+            # Parse action
+            action = parse_action(llm_response, domain)
+
+            # Step environment
             try:
-                success, score, metrics = agent.run_task(task_id)
-                task_results[task_id] = {
-                    "success": success,
-                    "score": score,
-                    "metrics": metrics
-                }
-                total_score += score
-                all_metrics.append(metrics)
+                step_resp = http.post(
+                    f"{ENVIRONMENT_HOST}/session/{session_id}/step",
+                    json={"session_id": session_id, "action": action},
+                    timeout=10
+                )
+                step_resp.raise_for_status()
+                step_data = step_resp.json()
             except Exception as e:
-                print(f"[ERROR] Task {task_id} failed: {e}", file=sys.stderr)
-                task_results[task_id] = {
-                    "success": False,
-                    "score": 0.001,
-                    "metrics": PerformanceMetrics(task_id=task_id, start_time=time.time())
-                }
-    
-    end_time = time.time()
-    total_time = end_time - start_time
-    avg_score = total_score / 30.0
-    total_tokens = sum(m.tokens_used for m in all_metrics)
-    
-    # Print performance report
-    print("\n" + "="*60, file=sys.stderr)
-    print("OPTIMIZED BASELINE SCORES (30 TASKS)", file=sys.stderr)
-    print("="*60, file=sys.stderr)
-    for task_id in range(1, 31):
-        result = task_results.get(task_id, {"score": 0.001, "success": False, "metrics": None})
-        metrics = result.get("metrics")
-        if metrics:
-            print(f"Task {task_id}: {clamp_score(result['score']):.3f} ({metrics.duration:.1f}s, {metrics.tokens_used} tokens)", file=sys.stderr)
-        else:
-            print(f"Task {task_id}: {clamp_score(result['score']):.3f} ({'✓' if result['success'] else '✗'})", file=sys.stderr)
-    
-    print(f"\nAverage Score: {clamp_score(avg_score):.3f}", file=sys.stderr)
-    print(f"Total Time: {total_time:.1f}s (Target: <25min)", file=sys.stderr)
-    print(f"Total Tokens: {total_tokens} (Optimized: ~40% reduction)", file=sys.stderr)
-    print(f"Avg Efficiency: {total_tokens / max(total_time, 0.1):.0f} tokens/sec", file=sys.stderr)
-    print("="*60 + "\n", file=sys.stderr)
-    
-    return task_results, avg_score, all_metrics
+                log_step(step, json.dumps(action)[:100], 0.01, True, str(e))
+                rewards.append(0.01)
+                break
+
+            reward = clamp_score(step_data.get("reward", 0.5))
+            done = step_data.get("done", False)
+            observation = step_data.get("observation", {})
+            feedback = step_data.get("feedback", "")
+
+            rewards.append(reward)
+            log_step(step, json.dumps(action)[:100], reward, done)
+
+            if done:
+                success = True
+                break
+
+        score = sum(rewards) / len(rewards) if rewards else 0.5
+        score = clamp_score(score)
+
+    except Exception as e:
+        print(f"[DEBUG] Episode failed: {e}", file=sys.stderr)
+        score = clamp_score(0.01)
+        rewards = rewards or [0.01]
+
+    log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
+    return success, score, rewards
 
 
-# ============ MAIN EXECUTION ============
+# ============ MAIN ============
 
 def main():
-    """Run optimized baseline agent on all 30 tasks"""
-    
-    try:
-        import requests
-    except ImportError:
-        print("[ERROR] requests library not found. Install with: pip install requests")
-        sys.exit(1)
-    
-    task_results, avg_score, metrics = run_all_tasks_parallel()
+    """Run baseline agent on representative tasks from each domain."""
+    print("=" * 70, file=sys.stderr)
+    print("LUNAR CONTENT MODERATION BENCHMARK v3.0 — Baseline Inference", file=sys.stderr)
+    print(f"Model: {MODEL_NAME}", file=sys.stderr)
+    print(f"Environment: {ENVIRONMENT_HOST}", file=sys.stderr)
+    print(f"Domains: text_classification | contextual_policy | threat_assessment", file=sys.stderr)
+    print("=" * 70, file=sys.stderr)
+
+    # Run 9 representative episodes (3 per domain × 3 difficulties)
+    episodes = [
+        # Text Classification: easy, medium, hard
+        1, 5, 9,
+        # Contextual Policy: easy, medium, hard
+        11, 15, 19,
+        # Threat Assessment: easy, medium, hard
+        21, 25, 30,
+    ]
+
+    all_results = {}
+    all_rewards = []
+    start_time = time.time()
+
+    for task_id in episodes:
+        success, score, rewards = run_episode(task_id)
+        all_results[task_id] = {"success": success, "score": score, "rewards": rewards}
+        all_rewards.extend(rewards)
+
+    elapsed = time.time() - start_time
+
+    # Print summary
+    print("\n" + "=" * 70, file=sys.stderr)
+    print("BENCHMARK SUMMARY", file=sys.stderr)
+    print("=" * 70, file=sys.stderr)
+    print(f"Episodes completed : {len(episodes)}/{len(episodes)}", file=sys.stderr)
+    print(f"Average reward     : {clamp_score(sum(r['score'] for r in all_results.values()) / len(all_results)):.4f}", file=sys.stderr)
+    print(f"Total time         : {elapsed:.1f}s", file=sys.stderr)
+
+    # Per-domain breakdown
+    domains = {
+        "text_classification": [1, 5, 9],
+        "contextual_policy": [11, 15, 19],
+        "threat_assessment": [21, 25, 30],
+    }
+    print("\nPer-Domain Performance:", file=sys.stderr)
+    for domain_name, task_ids in domains.items():
+        scores = [all_results[t]["score"] for t in task_ids if t in all_results]
+        avg = sum(scores) / len(scores) if scores else 0
+        easy = all_results.get(task_ids[0], {}).get("score", 0)
+        med = all_results.get(task_ids[1], {}).get("score", 0)
+        hard = all_results.get(task_ids[2], {}).get("score", 0)
+        print(f"  {domain_name:25s} → avg={avg:.4f}  (easy: {easy:.4f} | medium: {med:.4f} | hard: {hard:.4f})", file=sys.stderr)
+
+    # Difficulty gradient
+    print("\nDifficulty Gradient:", file=sys.stderr)
+    easy_scores = [all_results[t]["score"] for t in [1, 11, 21] if t in all_results]
+    med_scores = [all_results[t]["score"] for t in [5, 15, 25] if t in all_results]
+    hard_scores = [all_results[t]["score"] for t in [9, 19, 30] if t in all_results]
+    if easy_scores:
+        print(f"  easy   → avg: {sum(easy_scores)/len(easy_scores):.4f}", file=sys.stderr)
+    if med_scores:
+        print(f"  medium → avg: {sum(med_scores)/len(med_scores):.4f}", file=sys.stderr)
+    if hard_scores:
+        print(f"  hard   → avg: {sum(hard_scores)/len(hard_scores):.4f}", file=sys.stderr)
+    print("=" * 70, file=sys.stderr)
 
 
 if __name__ == "__main__":

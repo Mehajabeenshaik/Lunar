@@ -1,469 +1,281 @@
 """
-Content Moderation Benchmark - FastAPI Server
-Meta's Real-World Problem: Moderating social media posts at billion-scale
+Lunar Content Moderation Benchmark — FastAPI Server
+Multi-turn RL environment for training content moderation agents.
+
+OpenEnv v1 compliant:  POST /reset  |  POST /step  |  GET /state
 """
 
 import os
 import sys
-import json
 import traceback
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Any, List
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-# Add project root to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
-print("[DEBUG] Starting Content Moderation app...")
-
-try:
-    from content_moderation_env import ContentModerationEnv
-    print("[DEBUG] ContentModerationEnv imported successfully")
-except Exception as e:
-    print(f"[ERROR] Failed to import ContentModerationEnv: {e}")
-    traceback.print_exc()
-    sys.exit(1)
-
-# Initialize FastAPI app
-app = FastAPI(
-    title="Content Moderation Benchmark",
-    description="Meta Content Moderation Agent Environment",
-    version="1.0.0"
+from content_moderation_env import ContentModerationEnv
+from content_moderation_env.graders import safe_clamp, TASK_DOMAINS, TASK_DIFFICULTIES
+from models import (
+    ResetRequest, ResetResponse, StepRequest, StepResponse,
+    StateResponse, Observation, Action, RewardInfo,
 )
 
-# Pydantic models for requests/responses
-class StartSessionRequest(BaseModel):
-    task_id: int = 1
-    seed: Optional[int] = None
+# ─── FastAPI App ─────────────────────────────────────────────────────────
 
+app = FastAPI(
+    title="Lunar Content Moderation Benchmark",
+    description="Multi-turn RL environment for content moderation. 30 tasks across 3 domains.",
+    version="3.0.0",
+)
 
-class StepRequest(BaseModel):
-    session_id: str
-    action: Dict
+# ─── Session Management ─────────────────────────────────────────────────
 
-
-class SessionState:
-    """In-memory session management"""
+class SessionManager:
     def __init__(self):
         self.sessions: Dict[str, ContentModerationEnv] = {}
-    
-    def create_session(self, task_id: int = 1, seed: Optional[int] = None) -> str:
+
+    def create(self, task_id: int = 1, seed: Optional[int] = None) -> str:
         env = ContentModerationEnv(task_id=task_id, seed=seed)
-        session_id = env.current_session_id
-        self.sessions[session_id] = env
-        return session_id
-    
-    def get_session(self, session_id: str) -> Optional[ContentModerationEnv]:
+        self.sessions[env.current_session_id] = env
+        return env.current_session_id
+
+    def get(self, session_id: str) -> Optional[ContentModerationEnv]:
         return self.sessions.get(session_id)
-    
-    def delete_session(self, session_id: str) -> bool:
-        if session_id in self.sessions:
-            del self.sessions[session_id]
-            return True
-        return False
+
+    def delete(self, session_id: str) -> bool:
+        return self.sessions.pop(session_id, None) is not None
+
+sessions = SessionManager()
 
 
-sessions = SessionState()
-
-
-# ============ API Endpoints ============
-
-@app.get("/health")
-async def health():
-    """Health check endpoint for validator"""
-    try:
-        # Validate all graders work correctly
-        from content_moderation_env.graders import ModeratorGrader
-        grader = ModeratorGrader()
-        
-        test_pred = {"category": "safe"}
-        test_gt = {"category": "safe"}
-        
-        # Spot check a few tasks
-        test_scores = []
-        for tid in [1, 15, 30]:
-            score = grader.grade(tid, test_pred, test_gt)
-            test_scores.append(score)
-            if score <= 0.0 or score >= 1.0:
-                return {"status": "grader_error", "task": tid, "score": score}
-        
-        return {
-            "status": "ok",
-            "timestamp": datetime.now().isoformat(),
-            "grader_status": "all_tasks_safe"
-        }
-    except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e)[:50],
-            "timestamp": datetime.now().isoformat()
-        }
-
-
+# ═══════════════════════════════════════════════════════════════════════════
+# OPENENV STANDARD ENDPOINTS
+# ═══════════════════════════════════════════════════════════════════════════
 
 @app.get("/")
 async def root():
-    """Health check and welcome endpoint"""
+    """Welcome and health check."""
     return {
-        "name": "Content Moderation Benchmark",
-        "version": "1.0.0",
+        "name": "Lunar Content Moderation Benchmark",
+        "version": "3.0.0",
         "status": "running",
-        "description": "Meta Content Moderation Agent Environment for RL training",
-        "tasks": {
-            1: "Task 1 (Easy): Post Classification",
-            2: "Task 2 (Medium): Classification with Reasoning & Severity",
-            3: "Task 3 (Hard): Full Moderation Decision"
-        }
+        "spec": "OpenEnv v1",
+        "tasks": 30,
+        "domains": {
+            "text_classification": "Tasks 1-10: Classify posts by category, severity, and reasoning",
+            "contextual_policy": "Tasks 11-20: Enforce policies with author history, cultural context, and exceptions",
+            "threat_assessment": "Tasks 21-30: Detect coordinated threats, misinformation cascades, harassment networks",
+        },
+        "reward_range": "(0, 1) exclusive",
+        "multi_turn": True,
+        "max_steps_per_episode": 5,
     }
+
+
+@app.get("/health")
+async def health():
+    """Health check endpoint for validator."""
+    try:
+        from content_moderation_env.graders import ModeratorGrader
+        grader = ModeratorGrader()
+
+        # Verify all 30 tasks produce valid scores
+        test_pred = {"category": "safe", "severity": 1, "action": "keep", "reasoning": "test"}
+        test_gt = {"category": "safe", "severity": 1, "action": "keep"}
+
+        for tid in [1, 10, 15, 20, 25, 30]:
+            score = grader.grade(tid, test_pred, test_gt)
+            if score <= 0.0 or score >= 1.0:
+                return {"status": "error", "task": tid, "score": score}
+
+        return {
+            "status": "ok",
+            "version": "3.0.0",
+            "active_sessions": len(sessions.sessions),
+            "timestamp": datetime.now().isoformat(),
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)[:100]}
 
 
 @app.get("/manifest")
 async def get_manifest():
-    """Return OpenEnv manifest"""
+    """Return OpenEnv manifest."""
     return {
-        "name": "content-moderation-benchmark",
-        "version": "2.0",
-        "spec_version": 2,
-        "description": "Meta Content Moderation Agent Environment - 30 Tasks Enhanced",
+        "name": "lunar-content-moderation-benchmark",
+        "version": "3.0.0",
+        "spec_version": 1,
+        "description": "Multi-turn RL benchmark for content moderation. 3 domains, 30 tasks, progressive context reveal.",
         "type": "rl-environment",
         "tasks": 30,
-        "reward_range": [0.001, 0.999],
-        "reward_range_description": "All task scores strictly between 0 and 1 (exclusive bounds)",
-        "observation_space": {
-            "type": "json",
-            "description": "JSON object with post content and task instructions"
-        },
-        "domains": [
-            "domain_1_basic_classification",
-            "domain_2_context_aware_moderation",
-            "domain_3_edge_cases",
-            "domain_4_image_multimodal",
-            "domain_5_user_context_behavior",
-            "domain_6_cross_post_analysis",
-            "domain_7_advanced_reasoning"
-        ]
+        "reward_range": [0.01, 0.99],
+        "multi_turn": True,
+        "max_steps": 5,
+        "domains": ["text_classification", "contextual_policy", "threat_assessment"],
+        "tagline": "Train agents to moderate content like Meta engineers — with context, nuance, and accountability.",
     }
 
 
-@app.post("/session/start")
-async def start_session(request: StartSessionRequest):
-    """
-    Start a new session
-    
-    Args:
-        task_id: 1 (Easy), 2 (Medium), 3 (Hard)
-        seed: Optional random seed
-    
-    Returns:
-        session_id and initial observation
-    """
+@app.post("/reset")
+async def reset(request: ResetRequest = ResetRequest()):
+    """OpenEnv standard: Reset environment and start new episode."""
     try:
-        if request.task_id not in range(1, 31):
-            raise ValueError("task_id must be 1-30")
-        
-        session_id = sessions.create_session(
-            task_id=request.task_id,
-            seed=request.seed
-        )
-        
-        env = sessions.get_session(session_id)
+        session_id = sessions.create(task_id=request.task_id, seed=request.seed)
+        env = sessions.get(session_id)
         observation = env.reset()
-        
-        return {
-            "session_id": session_id,
-            "task_id": request.task_id,
-            "observation": observation,
-            "timestamp": datetime.now().isoformat()
-        }
+
+        return ResetResponse(
+            session_id=session_id,
+            task_id=request.task_id,
+            observation=Observation(**observation),
+        ).model_dump()
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/session/start")
+async def start_session(request: ResetRequest):
+    """Start a new moderation session (alias for /reset)."""
+    return await reset(request)
+
+
+@app.post("/step")
+async def step_global(request: StepRequest):
+    """OpenEnv standard: Execute step using session_id from request body."""
+    return await _do_step(request.session_id, request.action)
 
 
 @app.post("/session/{session_id}/step")
 async def step_session(session_id: str, request: StepRequest):
-    """
-    Execute one step in the environment
-    
-    Args:
-        session_id: Session identifier
-        action: Agent's moderation decision
-    
-    Returns:
-        observation, reward, done, info
-    """
+    """Execute one step in the environment."""
+    return await _do_step(session_id, request.action)
+
+
+async def _do_step(session_id: str, action: Dict) -> Dict:
+    """Core step logic shared by both endpoints."""
+    env = sessions.get(session_id)
+    if not env:
+        raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
+
     try:
-        env = sessions.get_session(session_id)
-        if not env:
-            raise ValueError(f"Session {session_id} not found")
-        
-        from content_moderation_env.graders import safe_clamp
-        
-        observation, reward, done, info = env.step(request.action)
-        
-        # Final boundary enforcement using centralized safe_clamp
+        observation, reward, done, info = env.step(action)
         reward = safe_clamp(reward)
-            
-        return {
-            "observation": observation,
-            "reward": reward,
-            "done": done,
-            "info": info,
-            "timestamp": datetime.now().isoformat()
-        }
+
+        return StepResponse(
+            observation=Observation(**observation),
+            reward=reward,
+            done=done,
+            info=info,
+            feedback=info.get("feedback", ""),
+            step_scores=env.rewards_history,
+        ).model_dump()
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-
-@app.get("/session/{session_id}/summary")
-async def get_session_summary(session_id: str):
-    """Get episode summary for a session"""
-    try:
-        env = sessions.get_session(session_id)
-        if not env:
-            raise ValueError(f"Session {session_id} not found")
-        
-        summary = env.get_episode_summary()
-        return {
-            "session_id": session_id,
-            "summary": summary,
-            "timestamp": datetime.now().isoformat()
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@app.delete("/session/{session_id}")
-async def delete_session(session_id: str):
-    """Delete a session"""
-    try:
-        if sessions.delete_session(session_id):
-            return {"status": "deleted", "session_id": session_id}
-        else:
-            raise ValueError(f"Session {session_id} not found")
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@app.get("/tasks")
-async def list_tasks():
-    """List all available 30 tasks"""
-    return {
-        "total_tasks": 30,
-        "tasks": [
-            # Domain 1: Basic Classification (1-3)
-            {"id": 1, "domain": "domain_1_basic_classification", "name": "Post Classification (Easy)", "difficulty": "easy"},
-            {"id": 2, "domain": "domain_1_basic_classification", "name": "Classification with Reasoning (Medium)", "difficulty": "medium"},
-            {"id": 3, "domain": "domain_1_basic_classification", "name": "Full Moderation Decision (Hard)", "difficulty": "hard"},
-            # Domain 2: Context-Aware (4-6)
-            {"id": 4, "domain": "domain_2_context_aware_moderation", "name": "Author History Context (Easy)", "difficulty": "easy"},
-            {"id": 5, "domain": "domain_2_context_aware_moderation", "name": "Trending Topic Context (Medium)", "difficulty": "medium"},
-            {"id": 6, "domain": "domain_2_context_aware_moderation", "name": "Appeal Case Handling (Hard)", "difficulty": "hard"},
-            # Domain 3: Edge Cases (7-9)
-            {"id": 7, "domain": "domain_3_edge_cases", "name": "False Positive Detection (Easy)", "difficulty": "easy"},
-            {"id": 8, "domain": "domain_3_edge_cases", "name": "Sarcasm & Irony Detection (Medium)", "difficulty": "medium"},
-            {"id": 9, "domain": "domain_3_edge_cases", "name": "Coordinated Inauthentic Behavior (Hard)", "difficulty": "hard"},
-            # Domain 4: Image & Multimodal (10-14)
-            {"id": 10, "domain": "domain_4_image_multimodal", "name": "Image Safety Classification (Easy)", "difficulty": "easy"},
-            {"id": 11, "domain": "domain_4_image_multimodal", "name": "Visual Toxicity Detection (Medium)", "difficulty": "medium"},
-            {"id": 12, "domain": "domain_4_image_multimodal", "name": "Multimodal Context (Hard)", "difficulty": "hard"},
-            {"id": 13, "domain": "domain_4_image_multimodal", "name": "Deepfake Detection (Medium)", "difficulty": "medium"},
-            {"id": 14, "domain": "domain_4_image_multimodal", "name": "Scene Safety (Easy)", "difficulty": "easy"},
-            # Domain 5: User Context (15-20)
-            {"id": 15, "domain": "domain_5_user_context_behavior", "name": "Author Credibility (Medium)", "difficulty": "medium"},
-            {"id": 16, "domain": "domain_5_user_context_behavior", "name": "Bot Detection (Medium)", "difficulty": "medium"},
-            {"id": 17, "domain": "domain_5_user_context_behavior", "name": "Inauthentic Behavior Patterns (Hard)", "difficulty": "hard"},
-            {"id": 18, "domain": "domain_5_user_context_behavior", "name": "Misinformation Spread Tracking (Hard)", "difficulty": "hard"},
-            {"id": 19, "domain": "domain_5_user_context_behavior", "name": "User Appeal Fairness (Medium)", "difficulty": "medium"},
-            {"id": 20, "domain": "domain_5_user_context_behavior", "name": "User Trust Score (Hard)", "difficulty": "hard"},
-            # Domain 6: Cross-Post (21-25)
-            {"id": 21, "domain": "domain_6_cross_post_analysis", "name": "Campaign Detection (Hard)", "difficulty": "hard"},
-            {"id": 22, "domain": "domain_6_cross_post_analysis", "name": "Viral Misinformation (Hard)", "difficulty": "hard"},
-            {"id": 23, "domain": "domain_6_cross_post_analysis", "name": "Harassment Network (Hard)", "difficulty": "hard"},
-            {"id": 24, "domain": "domain_6_cross_post_analysis", "name": "Context Collapse (Medium)", "difficulty": "medium"},
-            {"id": 25, "domain": "domain_6_cross_post_analysis", "name": "Cross-platform Consistency (Medium)", "difficulty": "medium"},
-            # Domain 7: Advanced Reasoning (26-30)
-            {"id": 26, "domain": "domain_7_advanced_reasoning", "name": "Satire vs Hate (Hard)", "difficulty": "hard"},
-            {"id": 27, "domain": "domain_7_advanced_reasoning", "name": "Cultural Sensitivity (Hard)", "difficulty": "hard"},
-            {"id": 28, "domain": "domain_7_advanced_reasoning", "name": "Policy Evolution (Medium)", "difficulty": "medium"},
-            {"id": 29, "domain": "domain_7_advanced_reasoning", "name": "Multi-language Moderation (Hard)", "difficulty": "hard"},
-            {"id": 30, "domain": "domain_7_advanced_reasoning", "name": "Accessibility Considerations (Medium)", "difficulty": "medium"},
-        ]
-    }
-
-
-@app.get("/stats")
-async def get_stats():
-    """Get benchmark statistics"""
-    return {
-        "active_sessions": len(sessions.sessions),
-        "environment": "ContentModerationEnv",
-        "tasks_available": 30,
-        "tasks_completed": len([s for s in sessions.sessions.values() if s.get("done")]),
-        "reward_range": [0.001, 0.999],
-        "reward_range_description": "All task scores strictly between 0 and 1 (exclusive bounds)",
-        "domains": [
-            "domain_1_basic_classification",
-            "domain_2_context_aware_moderation",
-            "domain_3_edge_cases",
-            "domain_4_image_multimodal",
-            "domain_5_user_context_behavior",
-            "domain_6_cross_post_analysis",
-            "domain_7_advanced_reasoning"
-        ],
-        "task_structure": {
-            "domain_1_basic_classification": 3,
-            "domain_2_context_aware_moderation": 3,
-            "domain_3_edge_cases": 3,
-            "domain_4_image_multimodal": 5,
-            "domain_5_user_context_behavior": 6,
-            "domain_6_cross_post_analysis": 5,
-            "domain_7_advanced_reasoning": 5
-        },
-        "timestamp": datetime.now().isoformat()
-    }
-
-
-# ============ OPENENV STANDARD ENDPOINTS ============
-
-@app.post("/reset")
-async def reset():
-    """
-    OpenEnv standard: Reset environment
-    Creates new session with default task (task_id=1)
-    
-    Returns:
-        observation: Initial observation
-        session_id: Session identifier for subsequent /step calls
-    """
-    try:
-        session_id = sessions.create_session(task_id=1, seed=None)
-        env = sessions.get_session(session_id)
-        observation = env.reset()
-        
-        return {
-            "observation": observation,
-            "session_id": session_id
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@app.post("/step")
-async def step():
-    """
-    OpenEnv standard: Execute step
-    NOTE: This endpoint requires session context via headers or query params
-    For proper OpenEnv compliance, use /session/{session_id}/step instead
-    
-    Returns:
-        observation, reward, done, info
-    """
-    raise HTTPException(
-        status_code=400,
-        detail="/step endpoint requires session_id. Use /session/{session_id}/step instead"
-    )
 
 
 @app.get("/state")
 async def get_state():
-    """
-    OpenEnv standard: Get environment state
-    Returns metadata about current environment configuration
-    
-    Returns:
-        Environment state and configuration
-    """
+    """OpenEnv standard: Get environment state."""
     return {
-        "environment": "ContentModerationEnv",
-        "version": "2.0",
-        "num_tasks": 30,
-        "reward_range": [0.001, 0.999],
-        "reward_range_description": "All task scores strictly between 0 and 1 (exclusive bounds)",
-        "timestamp": datetime.now().isoformat()
+        "name": "lunar-content-moderation-benchmark",
+        "version": "3.0.0",
+        "tasks_available": 30,
+        "active_sessions": len(sessions.sessions),
+        "domains": 3,
+        "reward_range": [0.01, 0.99],
+        "multi_turn": True,
+        "max_steps": 5,
+        "status": "ready",
     }
 
 
-@app.get("/debug/grader-scores")
-async def debug_grader_scores():
-    """DEBUG: Show all grader scores to verify no 0.0 or 1.0"""
-    try:
-        from content_moderation_env.graders import ModeratorGrader
-        grader = ModeratorGrader()
-        
-        test_cases = [
-            ({"category": "safe"}, {"category": "safe"}, "match"),
-            ({"category": "safe"}, {"category": "hate"}, "mismatch"),
-            ({}, {}, "empty"),
-        ]
-        
-        results = {}
-        for task_id in range(1, 31):
-            scores = []
-            for pred, gt, case_name in test_cases:
-                try:
-                    score = grader.grade(task_id, pred, gt)
-                    # Check boundaries
-                    is_safe = 0 < score < 1
-                    scores.append({
-                        "case": case_name,
-                        "score": score,
-                        "safe": is_safe,
-                        "json_repr": str(score)
-                    })
-                except Exception as e:
-                    scores.append({"case": case_name, "error": str(e)[:30]})
-            results[f"task_{task_id}"] = scores
-        
-        return {
-            "status": "debug_output",
-            "grader_test_results": results,
-            "timestamp": datetime.now().isoformat()
-        }
-    except Exception as e:
-        return {"error": str(e), "timestamp": datetime.now().isoformat()}
+@app.get("/state/{session_id}")
+async def get_session_state(session_id: str):
+    """Get specific session state."""
+    env = sessions.get(session_id)
+    if not env:
+        raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
 
+    return StateResponse(
+        session_id=session_id,
+        task_id=env.task_id,
+        domain=env.domain,
+        difficulty=env.difficulty,
+        step=env.steps,
+        rewards=env.rewards_history,
+        done=env.done,
+        history=env.feedback_history,
+    ).model_dump()
+
+
+@app.get("/session/{session_id}/summary")
+async def get_session_summary(session_id: str):
+    """Get episode summary for a session."""
+    env = sessions.get(session_id)
+    if not env:
+        raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
+
+    return {
+        "session_id": session_id,
+        "summary": env.get_episode_summary(),
+    }
+
+
+@app.delete("/session/{session_id}")
+async def delete_session(session_id: str):
+    """Delete a session."""
+    if sessions.delete(session_id):
+        return {"status": "deleted", "session_id": session_id}
+    raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
+
+
+@app.get("/tasks")
+async def list_tasks():
+    """List all 30 tasks with metadata."""
+    from content_moderation_env.environment import TASK_METADATA
+    tasks = []
+    for tid in range(1, 31):
+        meta = TASK_METADATA.get(tid, {})
+        tasks.append({
+            "id": tid,
+            "name": meta.get("name", f"Task {tid}"),
+            "description": meta.get("desc", ""),
+            "domain": TASK_DOMAINS.get(tid, "unknown"),
+            "difficulty": TASK_DIFFICULTIES.get(tid, "unknown"),
+        })
+    return {"total_tasks": 30, "tasks": tasks}
+
+
+@app.get("/stats")
+async def get_stats():
+    """Get benchmark statistics."""
+    return {
+        "active_sessions": len(sessions.sessions),
+        "tasks_available": 30,
+        "domains": {
+            "text_classification": {"tasks": 10, "range": "1-10"},
+            "contextual_policy": {"tasks": 10, "range": "11-20"},
+            "threat_assessment": {"tasks": 10, "range": "21-30"},
+        },
+        "reward_range": [0.01, 0.99],
+        "multi_turn": True,
+        "max_steps": 5,
+    }
+
+
+# ─── Entry Points ───────────────────────────────────────────────────────
 
 def main():
-    """Entry point for [project.scripts] server command"""
     import uvicorn
     port = int(os.getenv("PORT", 7860))
     host = os.getenv("HOST", "0.0.0.0")
-    
-    print(f"[DEBUG] Starting uvicorn on {host}:{port}...")
-    print(f"[DEBUG] Open http://localhost:{port}/docs for API documentation")
-    
-    try:
-        uvicorn.run(
-            app,
-            host=host,
-            port=port,
-            log_level="info"
-        )
-    except Exception as e:
-        print(f"[ERROR] Failed to start server: {e}")
-        traceback.print_exc()
-        sys.exit(1)
+    print(f"Starting Lunar Benchmark on {host}:{port}...")
+    uvicorn.run(app, host=host, port=port, log_level="info")
 
 
 if __name__ == "__main__":
-    import uvicorn
-    port = int(os.getenv("PORT", 7860))
-    host = os.getenv("HOST", "0.0.0.0")
-    
-    print(f"[DEBUG] Starting uvicorn on {host}:{port}...")
-    print(f"[DEBUG] Open http://localhost:{port}/docs for API documentation")
-    
-    try:
-        uvicorn.run(
-            app,
-            host=host,
-            port=port,
-            log_level="info"
-        )
-    except Exception as e:
-        print(f"[ERROR] Failed to start server: {e}")
-        traceback.print_exc()
-        sys.exit(1)
+    main()
