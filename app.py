@@ -199,31 +199,12 @@ async def step_session(session_id: str, request: StepRequest):
         if not env:
             raise ValueError(f"Session {session_id} not found")
         
+        from content_moderation_env.graders import safe_clamp
+        
         observation, reward, done, info = env.step(request.action)
         
-        # LOG: Check what grader returned
-        original_reward = reward
-        
-        # CRITICAL: Enforce strict boundaries before returning JSON
-        # Must be strictly between 0 and 1 (not 0.0 or 1.0)
-        reward = float(reward)
-        if reward <= 0.0:
-            reward = 0.001
-        if reward >= 1.0:
-            reward = 0.999
-        if not (0 < reward < 1):
-            reward = 0.5  # Fallback to safe middle value
-        
-        # Ensure JSON serialization doesn't produce "0.0" or "1.0"
-        # Round to 4 decimals to eliminate edge values
-        reward = round(reward, 4)
-        if reward <= 0.0 or reward >= 1.0:
-            reward = 0.5
-        
-        # Final paranoia check
-        reward_str = str(reward)
-        if reward_str == "0.0" or reward_str == "1.0":
-            reward = 0.5
+        # Final boundary enforcement using centralized safe_clamp
+        reward = safe_clamp(reward)
             
         return {
             "observation": observation,
@@ -443,26 +424,6 @@ async def debug_grader_scores():
         }
     except Exception as e:
         return {"error": str(e), "timestamp": datetime.now().isoformat()}
-async def get_state():
-    """
-    OpenEnv standard: Get environment state
-    Returns metadata about current environment configuration
-    
-    Returns:
-        Environment state and configuration
-    """
-    return {
-        "name": "content-moderation-benchmark",
-        "version": "2.0",
-        "tasks_available": 30,
-        "active_sessions": len(sessions.sessions),
-        "reward_range": [0.001, 0.999],
-        "reward_range_description": "All task scores strictly between 0 and 1 (exclusive bounds)",
-        "environment": "ContentModerationEnv",
-        "status": "ready",
-        "domains": 7,
-        "tasks_per_domain": "3-6"
-    }
 
 
 def main():

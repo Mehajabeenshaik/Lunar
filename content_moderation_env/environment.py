@@ -190,7 +190,7 @@ class ContentModerationEnv:
         done = self.steps >= self.max_steps
         
         # Calculate reward based on task using graders
-        from .graders import ModeratorGrader
+        from .graders import ModeratorGrader, safe_clamp
         
         # Ground truth data for this post
         ground_truth = {
@@ -200,41 +200,13 @@ class ContentModerationEnv:
         }
         
         try:
-            grader = ModeratorGrader()  # Create instance to access grade() method
+            grader = ModeratorGrader()
             reward = grader.grade(self.task_id, action, ground_truth)
-        except Exception as e:
-            # Graceful degradation: if grading fails, give partial credit
+        except Exception:
             reward = 0.5
         
-        # CRITICAL: ULTRA-AGGRESSIVE boundary validation - 5-layer protection
-        # Layer 1: Handle None
-        if reward is None:
-            reward = 0.5
-        
-        # Layer 2: Convert to float
-        try:
-            reward = float(reward)
-        except (ValueError, TypeError):
-            reward = 0.5
-        
-        # Layer 3: Hard clamp to valid range
-        if reward <= 0.0 or reward >= 1.0:
-            reward = 0.5
-        elif reward < 0.001:
-            reward = 0.001
-        elif reward > 0.999:
-            reward = 0.999
-        
-        # Layer 4: Round to 4 decimals to eliminate floating point precision issues
-        reward = round(float(reward), 4)
-        if reward <= 0.0 or reward >= 1.0:
-            reward = 0.5
-        
-        # Layer 5: Final assertion with fallback
-        try:
-            assert 0 < reward < 1, f"Score {reward} failed validation!"
-        except AssertionError:
-            reward = 0.5
+        # Final boundary enforcement using centralized safe_clamp
+        reward = safe_clamp(reward)
         
         self.rewards_history.append(reward)
         
