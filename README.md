@@ -1,3 +1,15 @@
+---
+title: Lunar Content Moderation Benchmark
+emoji: 🌙
+colorFrom: indigo
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: false
+license: mit
+short_description: "Multi-turn RL benchmark for content moderation. 3 domains, 30 tasks."
+---
+
 # 🌙 Lunar — Content Moderation Benchmark
 
 > **Train agents to moderate content like Meta engineers — with context, nuance, and accountability.**
