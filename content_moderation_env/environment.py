@@ -1,7 +1,8 @@
 """
 ContentModerationEnv — Multi-Turn Episode Environment
 
-Key improvements over v1:
+Key features:
+- 30 unique, deterministic tasks (via tasks.py) — no random post sampling
 - Multi-turn episodes (5 steps max) — agent improves based on feedback
 - Progressive context reveal — more info each step
 - Weighted scoring (later steps worth more)
@@ -16,79 +17,40 @@ from datetime import datetime
 from .graders import ModeratorGrader, safe_clamp, TASK_DOMAINS, TASK_DIFFICULTIES
 
 
-# ─── Task Metadata ──────────────────────────────────────────────────────────
+# ─── Task Metadata (for /tasks endpoint compatibility) ──────────────────────
 
 TASK_METADATA = {
-    # Domain 1: Text Classification (Tasks 1-10)
-    1:  {"name": "Basic Post Classification", "desc": "Classify the post as safe, hate_speech, spam, or misinformation."},
-    2:  {"name": "Spam Detection with Severity", "desc": "Identify spam content and rate its severity (1-5)."},
-    3:  {"name": "Hate Speech Classification", "desc": "Detect hate speech with severity assessment and explanation."},
-    4:  {"name": "Misinformation Flagging", "desc": "Identify false or misleading claims and explain why."},
-    5:  {"name": "Multi-label Classification", "desc": "Content may belong to multiple violation categories."},
-    6:  {"name": "Severity Calibration", "desc": "Assign precise severity scores with justification."},
-    7:  {"name": "Nuanced Classification", "desc": "Handle borderline content requiring careful reasoning."},
-    8:  {"name": "Context-Dependent Classification", "desc": "Classification that changes based on post context."},
-    9:  {"name": "Sarcasm-Aware Classification", "desc": "Detect sarcasm that changes the meaning of content."},
-    10: {"name": "Full Classification Pipeline", "desc": "Complete classification with category, severity, action, and reasoning."},
-    # Domain 2: Contextual Policy (Tasks 11-20)
-    11: {"name": "Author History Review", "desc": "Moderate considering author's prior violation history."},
-    12: {"name": "New Account Screening", "desc": "Apply stricter policies for new/unverified accounts."},
-    13: {"name": "Trending Topic Exceptions", "desc": "Apply policy exceptions for newsworthy content."},
-    14: {"name": "Policy Update Application", "desc": "Apply newly updated content policies correctly."},
-    15: {"name": "Cross-Cultural Moderation", "desc": "Moderate content considering cultural and regional context."},
-    16: {"name": "Language-Aware Policy", "desc": "Apply language-specific moderation guidelines."},
-    17: {"name": "Appeal Case Review", "desc": "Review an appeal and decide whether to overturn the original decision."},
-    18: {"name": "Trust Score Assessment", "desc": "Assign user trust scores based on behavior patterns."},
-    19: {"name": "False Positive Recovery", "desc": "Identify and correct false positive moderation decisions."},
-    20: {"name": "Evolving Policy Compliance", "desc": "Moderate under changing policies with backward compatibility."},
-    # Domain 3: Threat Assessment (Tasks 21-30)
-    21: {"name": "Bot Network Detection", "desc": "Identify automated bot accounts in coordinated campaigns."},
-    22: {"name": "Spam Campaign Detection", "desc": "Detect organized spam campaigns across multiple accounts."},
-    23: {"name": "Harassment Network Mapping", "desc": "Identify coordinated harassment targeting individuals."},
-    24: {"name": "Misinformation Cascade", "desc": "Track and assess spreading misinformation chains."},
-    25: {"name": "Coordinated Inauthentic Behavior", "desc": "Detect state-sponsored or organized inauthentic accounts."},
-    26: {"name": "Viral Threat Assessment", "desc": "Assess rapidly spreading dangerous content."},
-    27: {"name": "Cross-Platform Threat", "desc": "Detect threats that span multiple platforms."},
-    28: {"name": "Deepfake & Manipulation", "desc": "Identify synthetically generated or manipulated media."},
-    29: {"name": "Extremism Detection", "desc": "Detect radicalization patterns and extremist content."},
-    30: {"name": "Full Threat Response", "desc": "Complete threat assessment with detection, severity, response plan, and confidence."},
+    1:  {"name": "Basic Spam Detection",                "desc": "Classify, rate severity, and recommend action for a spam post."},
+    2:  {"name": "Pharmaceutical Spam with Severity",   "desc": "Identify spam involving health risk and rate severity."},
+    3:  {"name": "Hate Speech Classification",          "desc": "Detect hate speech and assess its severity."},
+    4:  {"name": "Credible-Looking Misinformation",     "desc": "Identify false claims disguised as credible reporting."},
+    5:  {"name": "Multi-Category Violation",            "desc": "Content violates multiple policies simultaneously."},
+    6:  {"name": "Severity Calibration",                "desc": "Assign precise severity scores with justification."},
+    7:  {"name": "Sarcasm vs Genuine Threat",           "desc": "Determine if post is satire or genuine violation."},
+    8:  {"name": "Quoted Hate Speech (Research)",       "desc": "Classify post quoting hate speech in research context."},
+    9:  {"name": "Coordinated Astroturfing",            "desc": "Detect fake organic sponsored content."},
+    10: {"name": "Full Classification Pipeline",        "desc": "Complete moderation with expert-level reasoning."},
+    11: {"name": "Repeat Offender Review",              "desc": "Moderate considering author's prior violation history."},
+    12: {"name": "New Account Screening",               "desc": "Apply stricter policies for new/unverified accounts."},
+    13: {"name": "Journalist Reporting Exception",      "desc": "Apply public interest exception for press coverage."},
+    14: {"name": "Updated Policy Application",          "desc": "Apply newly enacted AI content disclosure policy."},
+    15: {"name": "Cross-Cultural Context (Arabic)",     "desc": "Moderate Arabic post with MENA cultural context."},
+    16: {"name": "Satire vs Incitement (Spanish)",      "desc": "Classify Spanish-language satire with cultural cues."},
+    17: {"name": "Appeal Case Review",                  "desc": "Review a ban appeal and decide to uphold or overturn."},
+    18: {"name": "Trust Score Assessment",              "desc": "Assign trust classification from behavior patterns."},
+    19: {"name": "False Positive Recovery",             "desc": "Identify and correct an automated false positive."},
+    20: {"name": "Evolving Policy Compliance",          "desc": "Enforce new policy with proportional response."},
+    21: {"name": "Bot Network Detection",               "desc": "Identify automated bot accounts in a campaign."},
+    22: {"name": "Coordinated Spam Campaign",           "desc": "Detect organized spam across multiple accounts."},
+    23: {"name": "Targeted Harassment Network",         "desc": "Identify coordinated harassment targeting a journalist."},
+    24: {"name": "Misinformation Cascade",              "desc": "Track and assess a spreading bank-run misinformation."},
+    25: {"name": "State-Sponsored Inauthentic Behavior","desc": "Detect foreign-influence election interference."},
+    26: {"name": "Viral Dangerous Content",             "desc": "Assess rapidly spreading dangerous chemical instructions."},
+    27: {"name": "Cross-Platform Threat Actor",         "desc": "Track a ban-evading threat actor across platforms."},
+    28: {"name": "Deepfake Detection",                  "desc": "Identify AI-generated political deepfake video."},
+    29: {"name": "Radicalization Pipeline",             "desc": "Detect radicalization stage and recommend intervention."},
+    30: {"name": "Full Threat Response Protocol",       "desc": "Complete threat assessment for a coordinated attack."},
 }
-
-
-# ─── Sample Data ────────────────────────────────────────────────────────────
-
-SAMPLE_POSTS = [
-    {"text": "Just launched my startup! Check it out at totally-legit.ru - make money fast! 💰💰💰",
-     "category": "spam", "severity": 2, "action": "remove",
-     "threat_level": "low", "is_coordinated": False},
-    {"text": "I disagree with your political opinion. That doesn't make either of us bad people.",
-     "category": "safe", "severity": 1, "action": "keep",
-     "threat_level": "none", "is_coordinated": False},
-    {"text": "Report from WHO confirms vaccine effectiveness at 99.9%. Science saves lives.",
-     "category": "safe", "severity": 1, "action": "keep",
-     "threat_level": "none", "is_coordinated": False},
-    {"text": "The vaccine is a bio-weapon engineered by the elites. EXPOSED! Share before they delete!",
-     "category": "misinformation", "severity": 4, "action": "remove",
-     "threat_level": "high", "is_coordinated": True},
-    {"text": "[Targeted hateful speech against ethnic group with dehumanizing language]",
-     "category": "hate_speech", "severity": 5, "action": "ban",
-     "threat_level": "critical", "is_coordinated": False},
-    {"text": "I love my community. We should all treat each other with kindness and respect.",
-     "category": "safe", "severity": 1, "action": "keep",
-     "threat_level": "none", "is_coordinated": False},
-    {"text": "BREAKING: 5G towers cause cancer! Government hiding the truth! RT to spread awareness!",
-     "category": "misinformation", "severity": 3, "action": "label",
-     "threat_level": "medium", "is_coordinated": True},
-    {"text": "This user's posts are garbage. Everyone report this account and get them banned.",
-     "category": "harassment", "severity": 3, "action": "warn",
-     "threat_level": "medium", "is_coordinated": False},
-    {"text": "Earn $5000/day from home! Click bit.ly/scam123 Join 10,000 others NOW!",
-     "category": "spam", "severity": 3, "action": "remove",
-     "threat_level": "low", "is_coordinated": True},
-    {"text": "Earth is flat. NASA is lying. Wake up sheeple! Share if you agree!",
-     "category": "misinformation", "severity": 2, "action": "label",
-     "threat_level": "low", "is_coordinated": False},
-]
 
 
 # ─── Environment ────────────────────────────────────────────────────────────
@@ -97,11 +59,14 @@ class ContentModerationEnv:
     """
     Multi-turn content moderation environment.
 
+    Each task_id maps to a unique, specific scenario (via tasks.py).
+    No random post sampling — fully deterministic per task.
+
     Key features:
     - 5-step episodes with grader feedback after each step
     - Progressive context reveal (more context each step)
     - Weighted scoring (later steps worth 2x more)
-    - 3 genuinely different domains
+    - 3 genuinely different domains with domain-specific context
     """
 
     MAX_STEPS = 5
@@ -123,12 +88,38 @@ class ContentModerationEnv:
         self.done = False
         self.rewards_history: List[float] = []
         self.feedback_history: List[str] = []
-        self.current_post_data: Optional[Dict] = None
 
-        # Task info
+        # Task info sourced from tasks.py
         self.domain = TASK_DOMAINS.get(task_id, "text_classification")
         self.difficulty = TASK_DIFFICULTIES.get(task_id, "easy")
         self.task_meta = TASK_METADATA.get(task_id, {"name": f"Task {task_id}", "desc": "Content moderation task"})
+
+        # Load the specific task definition
+        self._load_task(task_id)
+
+    def _load_task(self, task_id: int) -> None:
+        """Load the deterministic task definition from tasks.py."""
+        try:
+            from tasks import get_task
+            task_def = get_task(task_id)
+            self._task_def = task_def
+            self._post_data = task_def["post"]
+            self._ground_truth = task_def["ground_truth"]
+            self._task_context = task_def.get("context", {})
+            self._scoring_hints = task_def.get("scoring_hints", {})
+        except Exception:
+            # Fallback to generic post if tasks.py unavailable
+            self._task_def = {}
+            self._post_data = {
+                "text": "This is a moderation task. Analyze and respond.",
+                "engagement": 100,
+                "author": f"user_{task_id}000",
+                "platform": "social_media",
+                "timestamp": datetime.now().isoformat(),
+            }
+            self._ground_truth = {"category": "safe", "severity": 1, "action": "keep"}
+            self._task_context = {}
+            self._scoring_hints = {}
 
     def _generate_session_id(self) -> str:
         combined = f"{datetime.now().isoformat()}-{random.random()}"
@@ -140,41 +131,33 @@ class ContentModerationEnv:
         self.done = False
         self.rewards_history = []
         self.feedback_history = []
-        self.current_post_data = random.choice(SAMPLE_POSTS)
-
         return self._build_observation()
 
     def step(self, action: Dict[str, Any]) -> Tuple[Dict, float, bool, Dict]:
         """
-        Execute one step. Agent's action is graded, feedback is returned.
+        Execute one step. Agent's action is graded, feedback returned.
 
         Returns: (observation, reward, done, info)
         """
         self.steps += 1
 
-        # Build ground truth from current post
-        ground_truth = self._build_ground_truth()
-
         # Grade with domain-specific grader + feedback
         score, feedback, _ = self.grader.grade_with_feedback(
-            self.task_id, action, ground_truth, self.steps
+            self.task_id, action, self._ground_truth, self.steps
         )
         score = safe_clamp(score)
 
         self.rewards_history.append(score)
         self.feedback_history.append(feedback)
 
-        # Episode ends after max steps or if agent achieves high score
+        # Episode ends after max steps or high score achieved
         self.done = self.steps >= self.MAX_STEPS or (score >= 0.90 and self.steps >= 2)
 
         # Build next observation with feedback
         observation = self._build_observation(feedback=feedback)
 
         # Calculate weighted final score (later steps worth more)
-        if self.done:
-            weighted_score = self._calculate_weighted_score()
-        else:
-            weighted_score = score
+        weighted_score = self._calculate_weighted_score() if self.done else score
 
         info = {
             "session_id": self.current_session_id,
@@ -190,7 +173,7 @@ class ContentModerationEnv:
 
     def _build_observation(self, feedback: Optional[str] = None) -> Dict:
         """Build observation with progressive context reveal."""
-        post = self.current_post_data
+        post = self._post_data
 
         obs = {
             "session_id": self.current_session_id,
@@ -200,10 +183,11 @@ class ContentModerationEnv:
             "title": self.task_meta["name"],
             "description": self.task_meta["desc"],
             "post": {
-                "text": post["text"],
-                "engagement": random.randint(10, 50000),
-                "author": f"user_{random.randint(1000, 9999)}",
-                "timestamp": datetime.now().isoformat(),
+                "text": post.get("text", ""),
+                "engagement": post.get("engagement", 0),
+                "author": post.get("author", "unknown"),
+                "platform": post.get("platform", "social_media"),
+                "timestamp": post.get("timestamp", datetime.now().isoformat()),
             },
             "step_number": self.steps,
             "max_steps": self.MAX_STEPS,
@@ -215,79 +199,68 @@ class ContentModerationEnv:
         if self.rewards_history:
             obs["previous_scores"] = self.rewards_history.copy()
 
-        # Domain-specific action space hints
+        # Domain-specific action space + progressive context reveal
         if self.domain == "text_classification":
             obs["action_space"] = {
                 "category": ["safe", "hate_speech", "spam", "misinformation", "harassment", "violence"],
-                "severity": "integer 1-5",
+                "severity": "integer 1-5 (1=minimal, 5=extreme)",
                 "action": ["keep", "label", "warn", "remove", "escalate", "ban"],
-                "reasoning": "string explaining your decision"
+                "reasoning": "Detailed explanation citing specific policy, content signals, and context"
             }
+            # Progressive: reveal scoring hints at step 2+
+            if self.steps >= 1 and self._scoring_hints.get("policy_refs"):
+                obs["policy_refs"] = self._scoring_hints["policy_refs"]
+
         elif self.domain == "contextual_policy":
             obs["action_space"] = {
                 "category": ["safe", "hate_speech", "spam", "misinformation", "harassment", "violence"],
                 "action": ["keep", "label", "warn", "remove", "escalate", "ban"],
-                "policy_exception": "true/false",
-                "reasoning": "string referencing context factors"
+                "policy_exception": "true/false — does a policy exception apply?",
+                "reasoning": "Explain referencing author history, active policies, cultural context"
             }
             # Progressive context reveal
-            obs["author_context"] = {
-                "prior_violations": random.randint(0, 5),
-                "account_age_days": random.randint(1, 3650),
-                "verified": random.choice([True, False]),
-                "follower_count": random.randint(0, 1000000),
-            }
+            ctx = self._task_context.get("author_context", {})
+            if ctx:
+                obs["author_context"] = ctx
+
             if self.steps >= 1:
-                obs["policy_context"] = {
-                    "active_policies": ["no_hate_speech", "no_spam", "label_misinformation"],
-                    "exceptions": ["public_interest_newsworthy", "artistic_expression"],
-                    "region": random.choice(["US", "EU", "IN", "BR", "Global"]),
-                }
+                policy_ctx = self._task_context.get("policy_context", {})
+                if policy_ctx:
+                    obs["policy_context"] = policy_ctx
+
             if self.steps >= 2:
-                obs["cultural_context"] = {
-                    "language": random.choice(["en", "es", "hi", "ar", "zh"]),
-                    "cultural_norms": "Consider regional context and local standards.",
-                }
+                cultural_ctx = self._task_context.get("cultural_context", {})
+                if cultural_ctx:
+                    obs["cultural_context"] = cultural_ctx
+
         elif self.domain == "threat_assessment":
             obs["action_space"] = {
-                "is_coordinated": "true/false",
+                "is_coordinated": "true/false — is this coordinated inauthentic behavior?",
                 "threat_level": ["none", "low", "medium", "high", "critical"],
-                "category": ["safe", "spam", "misinformation", "harassment", "hate_speech"],
+                "category": ["safe", "spam", "misinformation", "harassment", "hate_speech", "violence"],
                 "action": ["keep", "label", "warn", "remove", "escalate", "ban"],
-                "confidence": "float 0-1",
-                "reasoning": "string with threat analysis"
+                "confidence": "float 0.0-1.0 — confidence in your assessment",
+                "reasoning": "Threat analysis: detection → severity → response plan → prevention"
             }
-            obs["threat_context"] = {
-                "related_accounts": random.randint(1, 20),
-                "similar_posts_24h": random.randint(0, 100),
-                "reports_received": random.randint(0, 50),
-            }
-            if self.steps >= 1:
-                obs["threat_context"]["ip_overlap"] = random.choice([True, False])
-                obs["threat_context"]["creation_date_cluster"] = random.choice([True, False])
-            if self.steps >= 2:
-                obs["threat_context"]["network_graph_density"] = round(random.random(), 2)
-                obs["threat_context"]["known_campaign_similarity"] = round(random.random() * 0.8, 2)
+            # Progressive threat signal reveal
+            threat_ctx = self._task_context.get("threat_context", {})
+            if threat_ctx:
+                # Step 0: basic signals
+                basic = {k: v for k, v in threat_ctx.items()
+                         if k in ["related_accounts_posting_same", "similar_posts_24h",
+                                  "reports_received", "account_age_days", "posting_interval_seconds"]}
+                obs["threat_context"] = basic or threat_ctx
+
+            if self.steps >= 1 and threat_ctx:
+                # Step 1: coordination signals
+                obs["threat_context"] = {k: v for k, v in threat_ctx.items()
+                                          if k not in ["real_world_harm", "similar_attacks_other_cities"]}
+
+            if self.steps >= 2 and threat_ctx:
+                # Step 2+: full context including real-world impact
+                obs["threat_context"] = threat_ctx
 
         return obs
-
-    def _build_ground_truth(self) -> Dict:
-        """Build ground truth from current post data."""
-        post = self.current_post_data
-        gt = {
-            "category": post["category"],
-            "severity": post["severity"],
-            "action": post["action"],
-        }
-
-        if self.domain == "contextual_policy":
-            gt["policy_exception"] = post.get("category") == "safe"
-
-        if self.domain == "threat_assessment":
-            gt["is_coordinated"] = post.get("is_coordinated", False)
-            gt["threat_level"] = post.get("threat_level", "none")
-
-        return gt
 
     def _calculate_weighted_score(self) -> float:
         """Calculate weighted average where later steps count more."""

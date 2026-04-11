@@ -546,30 +546,37 @@ class ThreatAssessmentGrader:
         return min(0.95, base)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# UNIFIED GRADER — Routes to domain-specific graders
-# ═══════════════════════════════════════════════════════════════════════════
-
 class ModeratorGrader:
     """
     Central grader that routes to domain-specific graders.
-    Provides multi-turn feedback for agent improvement.
+    Uses task-specific scoring hints from tasks.py for targeted feedback.
     """
 
     def __init__(self):
         self.text_grader = TextClassificationGrader()
         self.context_grader = ContextualPolicyGrader()
         self.threat_grader = ThreatAssessmentGrader()
-        self._cache = {}
+        self._task_hints_cache: Dict[int, Dict] = {}
+
+    def _get_task_hints(self, task_id: int) -> Dict:
+        """Load scoring hints from tasks.py (cached)."""
+        if task_id not in self._task_hints_cache:
+            try:
+                import sys, os
+                sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+                from tasks import get_task
+                task_def = get_task(task_id)
+                self._task_hints_cache[task_id] = task_def.get("scoring_hints", {})
+            except Exception:
+                self._task_hints_cache[task_id] = {}
+        return self._task_hints_cache[task_id]
 
     def grade(self, task_id: int, prediction: Dict[str, Any],
               ground_truth: Dict[str, Any], step_num: int = 1,
               use_cache: bool = False) -> float:
         """
         Grade a prediction. Returns score strictly in (0, 1).
-
-        For backward compatibility, returns just the score.
-        Use grade_with_feedback() for full feedback.
+        Use grade_with_feedback() for full output.
         """
         score, _, _ = self.grade_with_feedback(task_id, prediction, ground_truth, step_num)
         return score
@@ -580,8 +587,67 @@ class ModeratorGrader:
         """
         Grade and return (score, feedback, done).
 
-        Routes to the appropriate domain grader based on task_id.
+        Adds a task-specific reasoning bonus when the agent's reasoning
+        matches the scoring_hints keywords/policy_refs from tasks.py.
         """
+        try:
+            domain = TASK_DOMAINS.get(task_id, "text_classification")
+
+            if domain == "text_classification":
+                score, feedback, done = self.text_grader.grade(
+                    task_id, prediction, ground_truth, step_num)
+            elif domain == "contextual_policy":
+                score, feedback, done = self.context_grader.grade(
+                    task_id, prediction, ground_truth, step_num)
+            elif domain == "threat_assessment":
+                score, feedback, done = self.threat_grader.grade(
+                    task_id, prediction, ground_truth, step_num)
+            else:
+                score, feedback, done = SCORE_DEFAULT, "Unknown domain", True
+
+            # ── Task-specific reasoning bonus ──────────────────────────────
+            # Reward agents for citing the exact keywords/policies this task tests
+            hints = self._get_task_hints(task_id)
+            reasoning = str(prediction.get("reasoning", "")).lower()
+            if reasoning and hints:
+                bonus = 0.0
+                matched_keywords = []
+                matched_policies = []
+
+                for kw in hints.get("reasoning_keywords", []):
+                    if kw.lower() in reasoning:
+                        matched_keywords.append(kw)
+
+                for pol in hints.get("policy_refs", []):
+                    pol_words = pol.replace("_", " ").lower()
+                    if pol_words in reasoning or pol.lower() in reasoning:
+                        matched_policies.append(pol)
+
+                # Bonus: up to +0.08 for task-specific keyword hits
+                kw_ratio = len(matched_keywords) / max(len(hints.get("reasoning_keywords", [1])), 1)
+                bonus += min(0.05, kw_ratio * 0.05)
+
+                # Bonus: up to +0.03 for policy reference hits
+                pol_ratio = len(matched_policies) / max(len(hints.get("policy_refs", [1])), 1)
+                bonus += min(0.03, pol_ratio * 0.03)
+
+                if bonus > 0:
+                    score = safe_clamp(score + bonus)
+                    if matched_keywords:
+                        feedback += f" | ✓ Task-specific signals: {', '.join(matched_keywords[:3])}"
+                    if matched_policies:
+                        feedback += f" | ✓ Policy refs: {', '.join(matched_policies[:2])}"
+
+            score = safe_clamp(score)
+            return score, feedback, done
+
+        except Exception as e:
+            return safe_clamp(SCORE_DEFAULT), f"Grading error: {str(e)[:50]}", True
+
+    def get_domain(self, task_id: int) -> str:
+        return TASK_DOMAINS.get(task_id, "text_classification")
+
+    def get_difficulty(self, task_id: int) -> str:
         try:
             domain = TASK_DOMAINS.get(task_id, "text_classification")
 
